@@ -1,71 +1,11 @@
-# End-to-end MLOps with Seldon Core and Jenkins X
+# Image Classifier
 
-This tutorial provides an end-to-end hands-on tutorial that shows you how to build your own re-usable MLOps pipelines leveraging Seldon Core and Jenkins X. 
+Implementation of an image classifier model, based in [PyTorch's MNIST example](https://github.com/pytorch/examples/blob/master/mnist/main.py).
 
-By the end of this tutorial, you will be able to:
-
-* Quickly spin up a project based on the MLOps quickstart
-* Leverage Seldon's prepackaged model servers
-* Leverage Seldon's language wrapper for custom model servers
-* Run unit tests using Jenkins X 
-* Run end-to-end tests for your model with KIND (Kubernetes in Docker)
-* Promote your model as a Jenkins X application across multiple (staging / prod) environments
-
-
-## Intuitive explanation
-
-In this project, we will be building an MLOps workflow to deploy your production machine learning models by buiding a re-usable pre-packaged model server through CI, and then deploying individual models using CD.
-
-![](images/jenkins-x-full-diagram.jpg)
-
-## Requirements
-
-* A Kubernetes cluster running v1.13+ (this was run using GKE)
-* The [jx CLI](https://github.com/jenkins-x/jx/) version 2.0.916
-* Jenkins-X installed in your cluster (you can set it up with the [jx boot tutorial](https://jenkins-x.io/docs/getting-started/setup/boot/))
-* Seldon Core [v0.5.0 installed]() in your cluster
-
-Once you set everything up, we'll be ready to kick off 🚀
-
-# Setting up repo
-
-Now we want to start setting up our repo. For this we'll just leverage the MLOps quickstart by running:
-
-
-```python
-!jx create quickstart - -org "SeldonIO" - -project-name "mlops-deployment" - -filter "mlops-quickstart"
-```
-
-What this command does is basically the following:
-
-* Find the quickstarts in the organisation "SeldonIO"
-* Find the quickstart named "mlops-quickstart"
-* Build the project with name "mlops-deployment"
-
-You now have a repo where you'll be able to leverage [Seldon's pre-packaged model servers](https://docs.seldon.io/projects/seldon-core/en/latest/servers/overview.html).
-
-Let's have a look at what was created:
-
-* `jenkins-x.yml` - File specifying the CI / CD steps 
-* `Makefile` - Commands to build and test model
-* `README.(md|ipynb)` - This file!
-* `VERSION` - A file containing the version which is updated upon each release
-* `charts/` 
-    * `mlops-server/` - Folder containing helm charts to deploy your model
-    * `preview/` - Folder containing reference to helm charts to create preview environments
-* `integration/`
-    * `kind_test_all.sh` - File that spins up KIND cluster and runs your model
-    * `test_e2e_model_server.py` - End-to-end tests to run on your model
-    * `requirements-dev.py` - Requirements for your end to end tests
-* `src/` 
-    * `model.joblib` - Sample trained model that is deployed when importing project
-    * `train_model.py` - Sample code to train your model and output a model.pickle
-    * `test_model.py` - Sample code to unit test your model 
-    * `requirements.txt` - Example requirements file with supported versions
-
-## Let's train a model locally
+## Training
 
 First we will train a machine learning model, which will help us classify news across multiple categories.
+This model will use a custom reusable server, responsible for loading a PyTorch model.
 
 ### Install dependencies 
 
@@ -73,24 +13,11 @@ We will need the following dependencies in order to run the Python code:
 
 
 ```python
-!cat src/requirements.txt
+!pygmentize src/requirements.txt
 ```
 
-    # You need the right versions for your model server:
-    # Model servers: https://docs.seldon.io/projects/seldon-core/en/latest/servers/overview.html
-    
-    # For SKLearn you need a pickle and the following:
-    scikit-learn==0.20.3 # See https://docs.seldon.io/projects/seldon-core/en/latest/servers/sklearn.html
-    joblib==0.13.2
-    
-    # For XGBoost you need v 0.82 and an xgboost export (not a pickle)
-    #xgboost==0.82
-    
-    # For MLFlow you need the following, and a link to the built model:
-    #mlflow==1.1.0
-    #pandas==0.25
-    
-    # For tensorflow, any models supported by tensorflow serving (less than v2.0)
+    torch==1.3.1
+    torchvision==0.4.2
 
 
 We can now install the dependencies using the make command:
@@ -100,6 +27,21 @@ We can now install the dependencies using the make command:
 !make install_dev
 ```
 
+    cat: VERSION: No such file or directory
+    Makefile:10: warning: overriding recipe for target 'make'
+    Makefile:7: warning: ignoring old recipe for target 'make'
+    Makefile:14: warning: overriding recipe for target 'make'
+    Makefile:10: warning: ignoring old recipe for target 'make'
+    pip install -r src/requirements.txt
+    Requirement already satisfied: torch==1.3.1 in /home/agm/.pyenv/versions/3.6.9/lib/python3.6/site-packages (from -r src/requirements.txt (line 1)) (1.3.1)
+    Requirement already satisfied: torchvision==0.4.2 in /home/agm/.pyenv/versions/3.6.9/lib/python3.6/site-packages (from -r src/requirements.txt (line 2)) (0.4.2)
+    Requirement already satisfied: numpy in /home/agm/.pyenv/versions/3.6.9/lib/python3.6/site-packages (from torch==1.3.1->-r src/requirements.txt (line 1)) (1.17.4)
+    Requirement already satisfied: pillow>=4.1.1 in /home/agm/.pyenv/versions/3.6.9/lib/python3.6/site-packages (from torchvision==0.4.2->-r src/requirements.txt (line 2)) (6.2.1)
+    Requirement already satisfied: six in /home/agm/.pyenv/versions/3.6.9/lib/python3.6/site-packages (from torchvision==0.4.2->-r src/requirements.txt (line 2)) (1.12.0)
+    [33mWARNING: You are using pip version 19.2.3, however version 19.3.1 is available.
+    You should consider upgrading via the 'pip install --upgrade pip' command.[0m
+
+
 ### Download the ML data
 
 Now that we have all the dependencies we can proceed to download the data.
@@ -108,23 +50,31 @@ We will download the news stories dataset, and we'll be attempting to classify a
 
 
 ```python
-from sklearn.datasets import fetch_20newsgroups
-categories = ['alt.atheism', 'soc.religion.christian',
-              'comp.graphics', 'sci.med']
+from src.data import fetch_training, fetch_test
 
-twenty_train = fetch_20newsgroups(
-    subset='train', categories=categories, shuffle=True, random_state=42)
-
-twenty_test = fetch_20newsgroups(
-    subset='test', categories=categories, shuffle=True, random_state=42)
-
-# Printing the top 3 newstories
-print("\n".join(twenty_train.data[0].split("\n")[:3]))
+training_dataset = fetch_training()
+test_dataset = fetch_test()
 ```
 
-    From: sd345@city.ac.uk (Michael Collier)
-    Subject: Converting images to HP LaserJet III?
-    Nntp-Posting-Host: hampton
+We can have a look into the data to see a few examples:
+
+
+```python
+import matplotlib.pyplot as plt 
+
+x_example, y_example = training_dataset[0]
+plt.imshow(x_example.squeeze())
+```
+
+
+
+
+    <matplotlib.image.AxesImage at 0x7f1d7a519940>
+
+
+
+
+![png](README_files/README_9_1.png)
 
 
 ### Train a model
@@ -133,40 +83,90 @@ Now that we've downloaded the data, we can train the ML model using a simple pip
 
 
 ```python
-from sklearn.pipeline import Pipeline
-from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
-from sklearn.naive_bayes import MultinomialNB
+import torch
+import torch.optim as optim
+from torch.optim.lr_scheduler import StepLR
 
-text_clf = Pipeline([
-    ('vect', CountVectorizer()),
-    ('tfidf', TfidfTransformer()),
-    ('clf', MultinomialNB()),
-])
+from src.data import fetch_test, fetch_training
+from src.train import train_epoch, test_epoch
+from src.model import Classifier
 
-text_clf.fit(twenty_train.data, twenty_train.target)
+batch_size = 256
+epochs = 2
+lr = 1.0
+gamma = 0.7
+
+train_loader = torch.utils.data.DataLoader(
+    training_dataset, batch_size=batch_size, shuffle=True
+)
+test_loader = torch.utils.data.DataLoader(
+    test_dataset, batch_size=batch_size, shuffle=True
+)
+
+model = Classifier()
+optimizer = optim.Adadelta(model.parameters(), lr=lr)
+
+scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
+for epoch in range(1, epochs + 1):
+    train_epoch(model, train_loader, optimizer, epoch)
+    test_epoch(model, test_loader)
+    scheduler.step()
 ```
 
-
-
-
-    Pipeline(memory=None,
-             steps=[('vect',
-                     CountVectorizer(analyzer='word', binary=False,
-                                     decode_error='strict',
-                                     dtype=<class 'numpy.int64'>, encoding='utf-8',
-                                     input='content', lowercase=True, max_df=1.0,
-                                     max_features=None, min_df=1,
-                                     ngram_range=(1, 1), preprocessor=None,
-                                     stop_words=None, strip_accents=None,
-                                     token_pattern='(?u)\\b\\w\\w+\\b',
-                                     tokenizer=None, vocabulary=None)),
-                    ('tfidf',
-                     TfidfTransformer(norm='l2', smooth_idf=True,
-                                      sublinear_tf=False, use_idf=True)),
-                    ('clf',
-                     MultinomialNB(alpha=1.0, class_prior=None, fit_prior=True))],
-             verbose=False)
-
+    Train Epoch: 1 [0/60000 (0%)]	Loss: 2.314072
+    Train Epoch: 1 [2560/60000 (4%)]	Loss: 1.937630
+    Train Epoch: 1 [5120/60000 (9%)]	Loss: 0.461113
+    Train Epoch: 1 [7680/60000 (13%)]	Loss: 0.303022
+    Train Epoch: 1 [10240/60000 (17%)]	Loss: 0.384866
+    Train Epoch: 1 [12800/60000 (21%)]	Loss: 0.315486
+    Train Epoch: 1 [15360/60000 (26%)]	Loss: 0.242260
+    Train Epoch: 1 [17920/60000 (30%)]	Loss: 0.274990
+    Train Epoch: 1 [20480/60000 (34%)]	Loss: 0.193279
+    Train Epoch: 1 [23040/60000 (38%)]	Loss: 0.168615
+    Train Epoch: 1 [25600/60000 (43%)]	Loss: 0.174742
+    Train Epoch: 1 [28160/60000 (47%)]	Loss: 0.344227
+    Train Epoch: 1 [30720/60000 (51%)]	Loss: 0.236581
+    Train Epoch: 1 [33280/60000 (55%)]	Loss: 0.150894
+    Train Epoch: 1 [35840/60000 (60%)]	Loss: 0.163011
+    Train Epoch: 1 [38400/60000 (64%)]	Loss: 0.145040
+    Train Epoch: 1 [40960/60000 (68%)]	Loss: 0.173859
+    Train Epoch: 1 [43520/60000 (72%)]	Loss: 0.135148
+    Train Epoch: 1 [46080/60000 (77%)]	Loss: 0.095240
+    Train Epoch: 1 [48640/60000 (81%)]	Loss: 0.175763
+    Train Epoch: 1 [51200/60000 (85%)]	Loss: 0.129632
+    Train Epoch: 1 [53760/60000 (89%)]	Loss: 0.115358
+    Train Epoch: 1 [56320/60000 (94%)]	Loss: 0.128080
+    Train Epoch: 1 [58880/60000 (98%)]	Loss: 0.129241
+    
+    Test set: Average loss: 0.0695, Accuracy: 9763/10000 (98%)
+    
+    Train Epoch: 2 [0/60000 (0%)]	Loss: 0.150772
+    Train Epoch: 2 [2560/60000 (4%)]	Loss: 0.095167
+    Train Epoch: 2 [5120/60000 (9%)]	Loss: 0.115704
+    Train Epoch: 2 [7680/60000 (13%)]	Loss: 0.120062
+    Train Epoch: 2 [10240/60000 (17%)]	Loss: 0.074608
+    Train Epoch: 2 [12800/60000 (21%)]	Loss: 0.084472
+    Train Epoch: 2 [15360/60000 (26%)]	Loss: 0.131837
+    Train Epoch: 2 [17920/60000 (30%)]	Loss: 0.031366
+    Train Epoch: 2 [20480/60000 (34%)]	Loss: 0.027841
+    Train Epoch: 2 [23040/60000 (38%)]	Loss: 0.065945
+    Train Epoch: 2 [25600/60000 (43%)]	Loss: 0.040186
+    Train Epoch: 2 [28160/60000 (47%)]	Loss: 0.104263
+    Train Epoch: 2 [30720/60000 (51%)]	Loss: 0.112271
+    Train Epoch: 2 [33280/60000 (55%)]	Loss: 0.124679
+    Train Epoch: 2 [35840/60000 (60%)]	Loss: 0.165172
+    Train Epoch: 2 [38400/60000 (64%)]	Loss: 0.053470
+    Train Epoch: 2 [40960/60000 (68%)]	Loss: 0.053918
+    Train Epoch: 2 [43520/60000 (72%)]	Loss: 0.104043
+    Train Epoch: 2 [46080/60000 (77%)]	Loss: 0.078170
+    Train Epoch: 2 [48640/60000 (81%)]	Loss: 0.056356
+    Train Epoch: 2 [51200/60000 (85%)]	Loss: 0.103222
+    Train Epoch: 2 [53760/60000 (89%)]	Loss: 0.081285
+    Train Epoch: 2 [56320/60000 (94%)]	Loss: 0.120430
+    Train Epoch: 2 [58880/60000 (98%)]	Loss: 0.130934
+    
+    Test set: Average loss: 0.0570, Accuracy: 9825/10000 (98%)
+    
 
 
 ### Test single prediction
@@ -177,22 +177,13 @@ We can see below that the model is able to predict the first datapoint in the da
 
 
 ```python
-idx = 0
-print(f"CONTENT:{twenty_test.data[idx][35:230]}\n\n-----------\n")
-print(f"PREDICTED CLASS: {categories[twenty_test.target[idx]]}")
+y_pred = model(x_example.unsqueeze(0))
+print(f"PREDICTED: {y_pred.argmax()}")
+print(f"ACTUAL: {y_example}")
 ```
 
-    CONTENT:
-    Subject: Re: HELP for Kidney Stones ..............
-    Organization: The Avant-Garde of the Now, Ltd.
-    Lines: 12
-    NNTP-Posting-Host: ucsd.edu
-    
-    As I recall from my bout with kidney stones, there isn't 
-    
-    -----------
-    
-    PREDICTED CLASS: comp.graphics
+    PREDICTED: 5
+    ACTUAL: 5
 
 
 ### Print accuracy
@@ -201,16 +192,15 @@ We can print the accuracy of the model by running the test data and counting the
 
 
 ```python
-import numpy as np
-
-predicted = text_clf.predict(twenty_test.data)
-print(f"Accuracy: {np.mean(predicted == twenty_test.target):.2f}")
+test_epoch(model, test_loader)
 ```
 
-    Accuracy: 0.83
+    
+    Test set: Average loss: 0.0570, Accuracy: 9825/10000 (98%)
+    
 
 
-## Deploy the model
+## Deployment
 
 Now we want to be able to deploy the model we just trained. This will just be as simple as updated the model binary.
 
@@ -220,15 +210,40 @@ First we have to save the trained model in the `src/` folder, which our wrapper 
 
 
 ```python
-import joblib
-joblib.dump(text_clf, "src/model.joblib")
+import os
+
+model_path = os.path.join("models", "model.pt")
+torch.save(model.state_dict(), model_path)
 ```
 
 
+    ---------------------------------------------------------------------------
+
+    FileNotFoundError                         Traceback (most recent call last)
+
+    <ipython-input-46-7c8efb7d3ee4> in <module>
+          2 
+          3 model_path = os.path.join("models", "model.pt")
+    ----> 4 torch.save(model.state_dict(), model_path)
+    
+
+    ~/.virtualenvs/sig-mlops/lib/python3.6/site-packages/torch/serialization.py in save(obj, f, pickle_module, pickle_protocol)
+        258         >>> torch.save(x, buffer)
+        259     """
+    --> 260     return _with_file_like(f, "wb", lambda f: _save(obj, f, pickle_module, pickle_protocol))
+        261 
+        262 
 
 
-    ['src/model.joblib']
+    ~/.virtualenvs/sig-mlops/lib/python3.6/site-packages/torch/serialization.py in _with_file_like(f, mode, body)
+        181             (sys.version_info[0] == 3 and isinstance(f, pathlib.Path)):
+        182         new_fd = True
+    --> 183         f = open(f, mode)
+        184     try:
+        185         return body(f)
 
+
+    FileNotFoundError: [Errno 2] No such file or directory: 'models/model.pt'
 
 
 ### Update your unit test
@@ -237,24 +252,22 @@ We'll write a very simple unit test that make sure that the model loads and runs
 
 
 ```python
-%%writefile src/test_model.py
-
-import numpy as np
-from unittest import mock
-import joblib
-
-EXPECTED_RESPONSE = np.array([3, 3])
-
-def test_model(*args, **kwargs):
-    data = ["text 1", "text 2"]
-
-    m = joblib.load("model.joblib")
-    result = m.predict(data)
-    assert all(result == EXPECTED_RESPONSE)
-
+!pygmentize src/test_model.py
 ```
 
-    Overwriting src/test_model.py
+    [34mimport[39;49;00m [04m[36mnumpy[39;49;00m [34mas[39;49;00m [04m[36mnp[39;49;00m
+    [34mfrom[39;49;00m [04m[36munittest[39;49;00m [34mimport[39;49;00m mock
+    [34mimport[39;49;00m [04m[36mjoblib[39;49;00m
+    [34mimport[39;49;00m [04m[36mos[39;49;00m
+    
+    EXPECTED_RESPONSE = np.array([[34m3[39;49;00m, [34m3[39;49;00m])
+    
+    [34mdef[39;49;00m [32mtest_model[39;49;00m(*args, **kwargs):
+        data = [[33m"[39;49;00m[33mtext 1[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mtext 2[39;49;00m[33m"[39;49;00m]
+    
+        m = joblib.load([33m"[39;49;00m[33mmodel.joblib[39;49;00m[33m"[39;49;00m)
+        result = m.predict(data)
+        [34massert[39;49;00m [36mall[39;49;00m(result == EXPECTED_RESPONSE)
 
 
 
@@ -263,21 +276,21 @@ def test_model(*args, **kwargs):
 ```
 
     cat: VERSION: No such file or directory
-    Makefile:12: warning: overriding recipe for target 'make'
-    Makefile:9: warning: ignoring old recipe for target 'make'
-    Makefile:15: warning: overriding recipe for target 'make'
-    Makefile:12: warning: ignoring old recipe for target 'make'
-    (cd src && pytest -s --verbose -W ignore 2>&1)
+    Makefile:10: warning: overriding recipe for target 'make'
+    Makefile:7: warning: ignoring old recipe for target 'make'
+    Makefile:14: warning: overriding recipe for target 'make'
+    Makefile:10: warning: ignoring old recipe for target 'make'
+    (cd src && \
+    	pytest -s --verbose -W ignore --log-level=INFO 2>&1)
     [1m============================= test session starts ==============================[0m
-    platform linux -- Python 3.7.3, pytest-5.1.1, py-1.8.0, pluggy-0.12.0 -- /home/alejandro/miniconda3/envs/reddit-classification/bin/python
+    platform linux -- Python 3.6.9, pytest-5.1.1, py-1.8.0, pluggy-0.13.1 -- /home/agm/.pyenv/versions/3.6.9/bin/python3.6
     cachedir: .pytest_cache
-    rootdir: /home/alejandro/Programming/kubernetes/seldon/sig-mlops-example/src
-    plugins: cov-2.7.1, forked-1.0.2, localserver-0.5.0
+    rootdir: /home/agm/Seldon/sig-mlops-jenkins-classic/models/news_classifier/src
     collected 1 item                                                               [0m
     
     test_model.py::test_model [32mPASSED[0m
     
-    [32m[1m============================== 1 passed in 2.21s ===============================[0m
+    [32m[1m============================== 1 passed in 1.05s ===============================[0m
 
 
 ### Updating Integration Tests
@@ -287,34 +300,42 @@ We can also now update the integration tests. This is another very simple step, 
 
 
 ```python
-%%writefile integration/test_e2e_sklearn_server.py
-from seldon_core.seldon_client import SeldonClient
-import numpy as np
-
-API_AMBASSADOR = "localhost:8003"
-
-def test_sklearn_server():
-    data = ["From: brian@ucsd.edu (Brian Kantor)\nSubject: Re: HELP for Kidney Stones ..............\nOrganization: The Avant-Garde of the Now, Ltd.\nLines: 12\nNNTP-Posting-Host: ucsd.edu\n\nAs I recall from my bout with kidney stones, there isn't any\nmedication that can do anything about them except relieve the pain.\n\nEither they pass, or they have to be broken up with sound, or they have\nto be extracted surgically.\n\nWhen I was in, the X-ray tech happened to mention that she'd had kidney\nstones and children, and the childbirth hurt less.\n\nDemerol worked, although I nearly got arrested on my way home when I barfed\nall over the police car parked just outside the ER.\n\t- Brian\n",
-            'From: rind@enterprise.bih.harvard.edu (David Rind)\nSubject: Re: Candida(yeast) Bloom, Fact or Fiction\nOrganization: Beth Israel Hospital, Harvard Medical School, Boston Mass., USA\nLines: 37\nNNTP-Posting-Host: enterprise.bih.harvard.edu\n\nIn article <1993Apr26.103242.1@vms.ocom.okstate.edu>\n banschbach@vms.ocom.okstate.edu writes:\n>are in a different class.  The big question seems to be is it reasonable to \n>use them in patients with GI distress or sinus problems that *could* be due \n>to candida blooms following the use of broad-spectrum antibiotics?\n\nI guess I\'m still not clear on what the term "candida bloom" means,\nbut certainly it is well known that thrush (superficial candidal\ninfections on mucous membranes) can occur after antibiotic use.\nThis has nothing to do with systemic yeast syndrome, the "quack"\ndiagnosis that has been being discussed.\n\n\n>found in the sinus mucus membranes than is candida.  Women have been known \n>for a very long time to suffer from candida blooms in the vagina and a \n>women is lucky to find a physician who is willing to treat the cause and \n>not give give her advise to use the OTC anti-fungal creams.\n\nLucky how?  Since a recent article (randomized controlled trial) of\noral yogurt on reducing vaginal candidiasis, I\'ve mentioned to a \nnumber of patients with frequent vaginal yeast infections that they\ncould try eating 6 ounces of yogurt daily.  It turns out most would\nrather just use anti-fungal creams when they get yeast infections.\n\n>yogurt dangerous).  If this were a standard part of medical practice, as \n>Gordon R. says it is, then the incidence of GI distress and vaginal yeast \n>infections should decline.\n\nAgain, this just isn\'t what the systemic yeast syndrome is about, and\nhas nothing to do with the quack therapies that were being discussed.\nThere is some evidence that attempts to reinoculate the GI tract with\nbacteria after antibiotic therapy don\'t seem to be very helpful in\nreducing diarrhea, but I don\'t think anyone would view this as a\nquack therapy.\n-- \nDavid Rind\nrind@enterprise.bih.harvard.edu\n']
-    labels = [2, 2]
-    
-    sc = SeldonClient(
-        gateway="ambassador", 
-        gateway_endpoint=API_AMBASSADOR,
-        deployment_name="news-classifier-server",
-        payload_type="ndarray",
-        namespace="default",
-        transport="rest")
-
-    result = sc.predict(np.array(data))
-    assert all(result.response.data.ndarray.values == labels)
+!pygmentize integration/test_e2e_seldon_model_server.py
 ```
 
-    Overwriting integration/test_e2e_sklearn_server.py
+    [34mfrom[39;49;00m [04m[36mseldon_core.seldon_client[39;49;00m [34mimport[39;49;00m SeldonClient
+    [34mfrom[39;49;00m [04m[36mseldon_core.utils[39;49;00m [34mimport[39;49;00m seldon_message_to_json
+    [34mimport[39;49;00m [04m[36mnumpy[39;49;00m [34mas[39;49;00m [04m[36mnp[39;49;00m
+    [34mfrom[39;49;00m [04m[36msubprocess[39;49;00m [34mimport[39;49;00m run
+    [34mimport[39;49;00m [04m[36mtime[39;49;00m
+    [34mimport[39;49;00m [04m[36mlogging[39;49;00m
+    
+    
+    API_AMBASSADOR = [33m"[39;49;00m[33mlocalhost:8003[39;49;00m[33m"[39;49;00m
+    
+    [34mdef[39;49;00m [32mtest_sklearn_server[39;49;00m():
+        data = [[33m"[39;49;00m[33mFrom: brian@ucsd.edu (Brian Kantor)[39;49;00m[33m\n[39;49;00m[33mSubject: Re: HELP for Kidney Stones ..............[39;49;00m[33m\n[39;49;00m[33mOrganization: The Avant-Garde of the Now, Ltd.[39;49;00m[33m\n[39;49;00m[33mLines: 12[39;49;00m[33m\n[39;49;00m[33mNNTP-Posting-Host: ucsd.edu[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33mAs I recall from my bout with kidney stones, there isn[39;49;00m[33m'[39;49;00m[33mt any[39;49;00m[33m\n[39;49;00m[33mmedication that can do anything about them except relieve the pain.[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33mEither they pass, or they have to be broken up with sound, or they have[39;49;00m[33m\n[39;49;00m[33mto be extracted surgically.[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33mWhen I was in, the X-ray tech happened to mention that she[39;49;00m[33m'[39;49;00m[33md had kidney[39;49;00m[33m\n[39;49;00m[33mstones and children, and the childbirth hurt less.[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33mDemerol worked, although I nearly got arrested on my way home when I barfed[39;49;00m[33m\n[39;49;00m[33mall over the police car parked just outside the ER.[39;49;00m[33m\n[39;49;00m[33m\t[39;49;00m[33m- Brian[39;49;00m[33m\n[39;49;00m[33m"[39;49;00m,
+                [33m'[39;49;00m[33mFrom: rind@enterprise.bih.harvard.edu (David Rind)[39;49;00m[33m\n[39;49;00m[33mSubject: Re: Candida(yeast) Bloom, Fact or Fiction[39;49;00m[33m\n[39;49;00m[33mOrganization: Beth Israel Hospital, Harvard Medical School, Boston Mass., USA[39;49;00m[33m\n[39;49;00m[33mLines: 37[39;49;00m[33m\n[39;49;00m[33mNNTP-Posting-Host: enterprise.bih.harvard.edu[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33mIn article <1993Apr26.103242.1@vms.ocom.okstate.edu>[39;49;00m[33m\n[39;49;00m[33m banschbach@vms.ocom.okstate.edu writes:[39;49;00m[33m\n[39;49;00m[33m>are in a different class.  The big question seems to be is it reasonable to [39;49;00m[33m\n[39;49;00m[33m>use them in patients with GI distress or sinus problems that *could* be due [39;49;00m[33m\n[39;49;00m[33m>to candida blooms following the use of broad-spectrum antibiotics?[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33mI guess I[39;49;00m[33m\'[39;49;00m[33mm still not clear on what the term [39;49;00m[33m"[39;49;00m[33mcandida bloom[39;49;00m[33m"[39;49;00m[33m means,[39;49;00m[33m\n[39;49;00m[33mbut certainly it is well known that thrush (superficial candidal[39;49;00m[33m\n[39;49;00m[33minfections on mucous membranes) can occur after antibiotic use.[39;49;00m[33m\n[39;49;00m[33mThis has nothing to do with systemic yeast syndrome, the [39;49;00m[33m"[39;49;00m[33mquack[39;49;00m[33m"[39;49;00m[33m\n[39;49;00m[33mdiagnosis that has been being discussed.[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33m>found in the sinus mucus membranes than is candida.  Women have been known [39;49;00m[33m\n[39;49;00m[33m>for a very long time to suffer from candida blooms in the vagina and a [39;49;00m[33m\n[39;49;00m[33m>women is lucky to find a physician who is willing to treat the cause and [39;49;00m[33m\n[39;49;00m[33m>not give give her advise to use the OTC anti-fungal creams.[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33mLucky how?  Since a recent article (randomized controlled trial) of[39;49;00m[33m\n[39;49;00m[33moral yogurt on reducing vaginal candidiasis, I[39;49;00m[33m\'[39;49;00m[33mve mentioned to a [39;49;00m[33m\n[39;49;00m[33mnumber of patients with frequent vaginal yeast infections that they[39;49;00m[33m\n[39;49;00m[33mcould try eating 6 ounces of yogurt daily.  It turns out most would[39;49;00m[33m\n[39;49;00m[33mrather just use anti-fungal creams when they get yeast infections.[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33m>yogurt dangerous).  If this were a standard part of medical practice, as [39;49;00m[33m\n[39;49;00m[33m>Gordon R. says it is, then the incidence of GI distress and vaginal yeast [39;49;00m[33m\n[39;49;00m[33m>infections should decline.[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33mAgain, this just isn[39;49;00m[33m\'[39;49;00m[33mt what the systemic yeast syndrome is about, and[39;49;00m[33m\n[39;49;00m[33mhas nothing to do with the quack therapies that were being discussed.[39;49;00m[33m\n[39;49;00m[33mThere is some evidence that attempts to reinoculate the GI tract with[39;49;00m[33m\n[39;49;00m[33mbacteria after antibiotic therapy don[39;49;00m[33m\'[39;49;00m[33mt seem to be very helpful in[39;49;00m[33m\n[39;49;00m[33mreducing diarrhea, but I don[39;49;00m[33m\'[39;49;00m[33mt think anyone would view this as a[39;49;00m[33m\n[39;49;00m[33mquack therapy.[39;49;00m[33m\n[39;49;00m[33m-- [39;49;00m[33m\n[39;49;00m[33mDavid Rind[39;49;00m[33m\n[39;49;00m[33mrind@enterprise.bih.harvard.edu[39;49;00m[33m\n[39;49;00m[33m'[39;49;00m]
+        labels = [[34m2.0[39;49;00m, [34m2.0[39;49;00m]
+        
+        sc = SeldonClient(
+            gateway=[33m"[39;49;00m[33mambassador[39;49;00m[33m"[39;49;00m,
+            gateway_endpoint=API_AMBASSADOR,
+            deployment_name=[33m"[39;49;00m[33mseldon-model-server[39;49;00m[33m"[39;49;00m,
+            payload_type=[33m"[39;49;00m[33mndarray[39;49;00m[33m"[39;49;00m,
+            namespace=[33m"[39;49;00m[33mseldon[39;49;00m[33m"[39;49;00m,
+            transport=[33m"[39;49;00m[33mrest[39;49;00m[33m"[39;49;00m)
+    
+        sm_result = sc.predict(data=np.array(data))
+        logging.info(sm_result)
+        result = seldon_message_to_json(sm_result.response)
+        logging.info(result)
+        values = result.get([33m"[39;49;00m[33mdata[39;49;00m[33m"[39;49;00m, {}).get([33m"[39;49;00m[33mndarray[39;49;00m[33m"[39;49;00m, {})
+        [34massert[39;49;00m (values == labels)
 
 
 ### Now push your changes to trigger the pipeline
-Because Jenkins X has created a CI GitOps pipeline for our repo we just need to push our changes to run all the tests
+Because Jenkins Classic has created a CI GitOps pipeline for our repo we just need to push our changes to run all the tests
 
 We can do this by running our good old git commands:
 
@@ -345,10 +366,7 @@ We can now see that the pipeline has been triggered by viewing our activities:
         Build And Push Images                              11h28m16s    1m32s Succeeded 
 
 
-
-```python
 Similarly we can actually see the logs of our running job:
-```
 
 
 ```bash
@@ -446,283 +464,3 @@ curl -X POST -H 'Content-Type: application/json' \
                                      Dload  Upload   Total   Spent    Left  Speed
     100   350  100   278  100    72   7942   2057 --:--:-- --:--:-- --:--:-- 10294
 
-
-# Diving into our continuous integration
-
-We have now separated our model development into two chunks: 
-
-* The first one involves the creation of a model serve, and the second one involves the CI of the model server, and the second involves the deployment of models that create the model.
-
-
-## Using the Jenkins X pipeline
-
-In order to do this we will be able to first run some tests and the push to the docker repo.
-
-For this we will be leveraging the Jenkins X file, we'll first start with a simple file that just runs the tests:
-
-
-```python
-%%writefile jenkins-x.yml
-buildPack: none
-pipelineConfig:
-  pipelines:
-    release:
-      pipeline:
-        agent:
-          image: seldonio/core-builder:0.4
-        stages:
-          - name: test-sklearn-server
-            steps:
-            - name: run-tests
-              command: make
-              args:
-              - install_dev
-              - test
-    pullRequest:
-      pipeline:
-        agent:
-          image: seldonio/core-builder:0.4
-        stages:
-          - name: test-sklearn-server
-            steps:
-            - name: run-tests
-              command: make
-              args:
-              - install_dev
-              - test
-```
-
-    Overwriting jenkins-x.yml
-
-
-The `jenkins-x.yml` file is pretty easy to understand if we read through the different steps.
-
-Basically we can define the steps of what happens upon `release` - i.e. when a PR / Commit is added to master - and what happens upon `pullRequest` - whenever someone opens a pull request.
-
-You can see that the steps are exactly the same for both release and PR for now - namely, we run `make install_dev test` which basically installs all the dependencies and runs all the tests.
-
-# Integration tests
-
-Now that we have a model that we want to be able to deploy, we want to make sure that we run end-to-end tests on that model to make sure everything works as expected.
-
-For this we will leverage the same framework that the Kubernetes team uses to test Kubernetes itself: KIND.
-
-KIND stands for Kubernetes in Docker, and is used to isolate a Kubernetes environent for end-to-end tests.
-
-In our case, we will be able to leverage to create an isolated environment, where we'll be able to test our model.
-
-For this, the steps we'll have to carry out include:
-
-1. Authenticate your docker with the jx CLI
-2. Add the steps in the `Jenkins-X.yml` to run this in the production cluster
-3. Leverage the `kind_run_all.sh` script that creates a KIND cluster and runs the tests
-
-
-## Add docker auth to your cluster
-
-Adding a docker authentication with Jenkins X can be done through a JX CLI command, which is the following:
-
-* `jx create docker auth --host https://index.docker.io/v1/ --user $YOUR_DOCKER_USERNAME --secret $YOUR_DOCKER_KEY_SECRET --email $YOUR_DOCKER_EMAIL`
-
-This comamnd will use these credentials to authenticate with Docker and create an auth token (which expires).
-
-## Extend JenkinsX file for integration
-
-Now that we have the test that would run for the integration tests, we need to extend the JX pipeline to run this.
-
-This extension is quite simple, and only requires adding the following line:
-    
-```
-            - name: run-end-to-end-tests
-              command: bash
-              args:
-              - integration/kind_test_all.sh
-```
-
-This line would be added in both the PR and release pipelines so that we can run integration tests then.
-
-It is also possible to move the integration tests into a separate jenkins-x file such as `jenkins-x-integration.yml` by leveraging [Contexts & Schedules]() which basically allow us to extend the functionality of Prow by writing our own triggers, however this is outside the scope of this tutorial.
-
-### Config to provide docker authentication
-
-This piece is slightly more extensive, as we will need to use Docker to build out containers due to the dependency on `s2i` to build the model wrappers.
-
-First we need to define the volumes that we'll be mounting to the container.
-
-The first few volumes before basically consist of the core components that docker will need to be able to run.
-```
-          volumes:
-            - name: modules
-              hostPath:
-                path: /lib/modules
-                type: Directory
-            - name: cgroup
-              hostPath:
-                path: /sys/fs/cgroup
-                type: Directory
-            - name: dind-storage
-              emptyDir: {}
-```
-We also want to mount the docker credentials which we will generate in the next step.
-```
-            - name: jenkins-docker-config-volume
-              secret:
-                items:
-                - key: config.json
-                  path: config.json
-                secretName: jenkins-docker-cfg
-```
-Once we've created the volumes, now we just need to mount them. This can be done as follows:
-```
-        options:
-          containerOptions:
-            volumeMounts:
-              - mountPath: /lib/modules
-                name: modules
-                readOnly: true
-              - mountPath: /sys/fs/cgroup
-                name: cgroup
-              - name: dind-storage
-                mountPath: /var/lib/docker                 
-```
-And finally we also mount the docker auth configuration so we don't have to run `docker login`:
-```
-              - mountPath: /builder/home/.docker
-                name: jenkins-docker-config-volume
-```
-
-And to finalise, we need to make sure that the pod can run with privileged context.
-
-The reason why this is required is in order to be able to run the docker daemon:
-```
-            securityContext:
-              privileged: true
-```
-
-## Kind run all integration tests script
-
-The kind_run_all may seem complicated at first, but it's actually quite simple. 
-
-All the script does is set-up a kind cluster with all dependencies, deploy the model and clean everything up.
-
-Let's break down each of the components within the script.
-
-#### Start docker
-
-We first start the docker daemon and wait until Docker is running (using `docker ps q` for guidance.
-
-```
-# FIRST WE START THE DOCKER DAEMON
-service docker start
-# the service can be started but the docker socket not ready, wait for ready
-WAIT_N=0
-while true; do
-    # docker ps -q should only work if the daemon is ready
-    docker ps -q > /dev/null 2>&1 && break
-    if [[ ${WAIT_N} -lt 5 ]]; then
-        WAIT_N=$((WAIT_N+1))
-        echo "[SETUP] Waiting for Docker to be ready, sleeping for ${WAIT_N} seconds ..."
-        sleep ${WAIT_N}
-    else
-        echo "[SETUP] Reached maximum attempts, not waiting any longer ..."
-        break
-    fi
-done
-```
-
-#### Create and set-up KIND cluster
-
-Once we're running a docker daemon, we can run the command to create our KIND cluster, and install all the components.
-
-This will set up a Kubnernetes cluster using the docker daemon (using containers as Nodes), and then install Ambassador + Seldon Core.
-
-```
-#######################################
-# AVOID EXIT ON ERROR FOR FOLLOWING CMDS
-set +o errexit
-
-# START CLUSTER 
-make kind_create_cluster
-KIND_EXIT_VALUE=$?
-
-# Ensure we reach the kubeconfig path
-export KUBECONFIG=$(kind get kubeconfig-path)
-
-# ONLY RUN THE FOLLOWING IF SUCCESS
-if [[ ${KIND_EXIT_VALUE} -eq 0 ]]; then
-    # KIND CLUSTER SETUP
-    make kind_setup
-    SETUP_EXIT_VALUE=$?
-```
-
-#### Run python tests
-
-We can now run the tests; for this we run all the dev installations and kick off our tests (which we'll add inside of the integration folder).
-
-```
-    # BUILD S2I BASE IMAGES
-    make build
-    S2I_EXIT_VALUE=$?
-
-    ## INSTALL ALL REQUIRED DEPENDENCIES
-    make install_integration_dev
-    INSTALL_EXIT_VALUE=$?
-    
-    ## RUNNING TESTS AND CAPTURING ERROR
-    make test
-    TEST_EXIT_VALUE=$?
-fi
-```
-
-#### Clean up
-
-Finally we just clean everything, including the cluster, the containers and the docker daemon.
-
-```
-# DELETE KIND CLUSTER
-make kind_delete_cluster
-DELETE_EXIT_VALUE=$?
-
-#######################################
-# EXIT STOPS COMMANDS FROM HERE ONWARDS
-set -o errexit
-
-# CLEANING DOCKER
-docker ps -aq | xargs -r docker rm -f || true
-service docker stop || true
-```
-
-
-# Promote your application
-Now that we've verified that our CI pipeline is working, we want to promote our application to production
-
-This can be done with our JX CLI:
-
-
-```python
-!jx promote application --...
-```
-
-## Test your production application
-
-Once your production application is deployed, you can test it using the same script, but in the `jx-production` namespace:
-
-
-```python
-from seldon_core.seldon_client import SeldonClient
-import numpy as np
-
-url = !kubectl get svc ambassador -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
-
-sc = SeldonClient(
-    gateway="ambassador", 
-    gateway_endpoint="localhost:80",
-    deployment_name="mlops-server",
-    payload_type="ndarray",
-    namespace="jx-production",
-    transport="rest")
-
-response = sc.predict(data=np.array([twenty_test.data[0]]))
-
-response.response.data
-```
