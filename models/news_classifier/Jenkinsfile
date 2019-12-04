@@ -11,10 +11,10 @@ podTemplate(label: label,
       command: 'cat', 
       ttyEnabled: true,
       privileged: true,
-      /* resourceRequestCpu: '200m', */
-      /* resourceLimitCpu: '500m', */
-      /* resourceRequestMemory: '1500Mi', */
-      /* resourceLimitMemory: '1500Mi', */
+      resourceRequestCpu: '200m',
+      resourceLimitCpu: '500m',
+      resourceRequestMemory: '1500Mi',
+      resourceLimitMemory: '1500Mi',
   ),
   containerTemplate(
       name: 'jnlp', 
