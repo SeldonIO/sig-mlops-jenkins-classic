@@ -168,5 +168,7 @@ dmypy.json
 ehthumbs.db
 Thumbs.db
 
-
+# Don't add data folders #
+# ########################
+data/
 
