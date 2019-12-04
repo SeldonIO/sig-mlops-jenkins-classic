@@ -6,7 +6,7 @@ podTemplate(label: label,
   workspaceVolume: dynamicPVC(requestsSize: "4Gi"),
   containers: [
   containerTemplate(
-      name: 'news_classifier-builder', 
+      name: 'news-classifier-builder', 
       image: 'seldonio/core-builder:0.4', 
       command: 'cat', 
       ttyEnabled: true,
@@ -33,7 +33,7 @@ spec:
         ephemeral-storage: "500Mi"
       requests:
         ephemeral-storage: "500Mi"
-  - name: news_classifier-builder
+  - name: news-classifier-builder
     imagePullPolicy: IfNotPresent
     resources:
       limits:
@@ -54,7 +54,7 @@ volumes: [
     def previousGitCommit = sh(script: "git rev-parse ${gitCommit}~", returnStdout: true)
  
     stage('Test') {
-      container('news_classifier-builder') {
+      container('news-classifier-builder') {
         sh """
           pwd
           make -C models/news_classifier \
@@ -65,13 +65,13 @@ volumes: [
     }
 
     stage('Test integration') {
-      container('news_classifier-builder') {
+      container('news-classifier-builder') {
         sh 'models/news_classifier/integration/kind_test_all.sh'
       }
     }
 
     stage('Promote application') {
-      container('news_classifier-builder') {
+      container('news-classifier-builder') {
         withCredentials([[$class: 'UsernamePasswordMultiBinding',
               credentialsId: 'github-access',
               usernameVariable: 'GIT_USERNAME',
