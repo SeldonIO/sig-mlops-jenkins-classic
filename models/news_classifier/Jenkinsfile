@@ -64,11 +64,11 @@ volumes: [
       }
     }
 
-    stage('Test integration') {
-      container('news-classifier-builder') {
-        sh 'models/news_classifier/integration/kind_test_all.sh'
-      }
-    }
+    /* stage('Test integration') { */
+      /* container('news-classifier-builder') { */
+        /* sh 'models/news_classifier/integration/kind_test_all.sh' */
+      /* } */
+    /* } */
 
     stage('Promote application') {
       container('news-classifier-builder') {
