@@ -10,7 +10,7 @@ spec:
       name: default
       implementation: {{ .Values.model.type }}
       children: []
-      modelUri: gs://news_classifier/model
+      modelUri: {{ .Values.model.uri }}
       parameters:
       - name: method
         type: STRING
