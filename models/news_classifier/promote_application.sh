@@ -17,7 +17,7 @@ export UUID=$(cat /proc/sys/kernel/random/uuid)
 git clone https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/${GITOPS_ORG}/${GITOPS_REPO}
 
 cd ${GITOPS_REPO}
-cp ../charts/* ${STAGING_FOLDER}/.
+cp -r ../charts/* ${STAGING_FOLDER}/.
 ls ${STAGING_FOLDER}
 
 # Check if any modifications identified
@@ -35,7 +35,7 @@ git commit -m '{"Action":"Deployment created","Message":"","Author":"","Email":"
 git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/${GITOPS_ORG}/${GITOPS_REPO}
 
 # Add PR to prod
-cp ../charts/* production/.
+cp -r ../charts/* production/.
 
 # Create branch and push
 git checkout -b ${UUID}
