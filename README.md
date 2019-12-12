@@ -114,7 +114,6 @@ From a high-level point of view, the pipeline configuration will be responsible 
 - Define a **replicable** test and build environment.
 - Run the unit and integration tests (if applicable).
 - Promote the application into our staging and production environments.
-  As discussed [previously](#ci-cd-pipeline), the change will be promoted automatically to the staging environment and will require an approval in the production environment.
   
 We can see a `Jenkinsfile` below taken from the [`news_classifier`](./models/news_classifier) example.
 This `Jenkinsfile` defines a pipeline which takes into account all of the points mentioned above.
@@ -288,41 +287,6 @@ podTemplate(...,
       ...
     ''',
 ....)
-```
-
-
-```python
-
-```
-
-
-```python
-
-```
-
-
-```python
-
-```
-
-
-```python
-
-```
-
-
-```python
-
-```
-
-
-```python
-
-```
-
-
-```python
-
 ```
 
 ### Run tests in Kind 
