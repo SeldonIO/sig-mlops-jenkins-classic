@@ -108,8 +108,6 @@ This includes a detailed description of the `Jenkinsfile`, as well as a look int
 Note that this will cover a generic example.
 However, as we shall see, specialising this approach into any of our [three main use cases](#use-cases) will be straightforward.
 
-## Jenkins Pipelines
-
 We leverage [Jenkins Pipelines](https://jenkins.io/doc/book/pipeline/) in order to run our continous integration and delivery automation.
 From a high-level point of view, the pipeline configuration will be responsible for:
 
@@ -122,7 +120,99 @@ We can see a `Jenkinsfile` below taken from the [`news_classifier`](./models/new
 This `Jenkinsfile` defines a pipeline which takes into account all of the points mentioned above.
 The following sections will dive into each of the sections in a much higher detail.
 
-### Replicable test and build environment
+
+```python
+!pygmentize -l groovy ./models/news_classifier/Jenkinsfile
+```
+
+    [37m//properties([pipelineTriggers([githubPush()])])[39;49;00m
+    
+    [36mdef[39;49;00m label = [33m"worker-${UUID.randomUUID().toString()}"[39;49;00m
+    
+    podTemplate(label: label, 
+      workspaceVolume: dynamicPVC(requestsSize: [33m"4Gi"[39;49;00m),
+      containers: [
+      containerTemplate(
+          name: [33m'news-classifier-builder'[39;49;00m, 
+          image: [33m'seldonio/core-builder:0.4'[39;49;00m, 
+          command: [33m'cat'[39;49;00m, 
+          ttyEnabled: [34mtrue[39;49;00m,
+          privileged: [34mtrue[39;49;00m,
+          resourceRequestCpu: [33m'200m'[39;49;00m,
+          resourceLimitCpu: [33m'500m'[39;49;00m,
+          resourceRequestMemory: [33m'1500Mi'[39;49;00m,
+          resourceLimitMemory: [33m'1500Mi'[39;49;00m,
+      ),
+      containerTemplate(
+          name: [33m'jnlp'[39;49;00m, 
+          image: [33m'jenkins/jnlp-slave:3.35-5-alpine'[39;49;00m, 
+          args: [33m'${computer.jnlpmac} ${computer.name}'[39;49;00m)
+    ],
+    yaml:[33m'''[39;49;00m
+    [33mspec:[39;49;00m
+    [33m  securityContext:[39;49;00m
+    [33m    fsGroup: 1000[39;49;00m
+    [33m  containers:[39;49;00m
+    [33m  - name: jnlp[39;49;00m
+    [33m    imagePullPolicy: IfNotPresent[39;49;00m
+    [33m    resources:[39;49;00m
+    [33m      limits:[39;49;00m
+    [33m        ephemeral-storage: "500Mi"[39;49;00m
+    [33m      requests:[39;49;00m
+    [33m        ephemeral-storage: "500Mi"[39;49;00m
+    [33m  - name: news-classifier-builder[39;49;00m
+    [33m    imagePullPolicy: IfNotPresent[39;49;00m
+    [33m    resources:[39;49;00m
+    [33m      limits:[39;49;00m
+    [33m        ephemeral-storage: "15Gi"[39;49;00m
+    [33m      requests:[39;49;00m
+    [33m        ephemeral-storage: "15Gi"[39;49;00m
+    [33m'''[39;49;00m,
+    volumes: [
+      hostPathVolume(mountPath: [33m'/sys/fs/cgroup'[39;49;00m, hostPath: [33m'/sys/fs/cgroup'[39;49;00m),
+      hostPathVolume(mountPath: [33m'/lib/modules'[39;49;00m, hostPath: [33m'/lib/modules'[39;49;00m),
+      emptyDirVolume(mountPath: [33m'/var/lib/docker'[39;49;00m),
+    ]) {
+      node(label) {
+        [36mdef[39;49;00m myRepo = checkout scm
+        [36mdef[39;49;00m gitCommit = myRepo.[36mGIT_COMMIT[39;49;00m
+        [36mdef[39;49;00m gitBranch = myRepo.[36mGIT_BRANCH[39;49;00m
+        [36mdef[39;49;00m shortGitCommit = [33m"${gitCommit[0..10]}"[39;49;00m
+        [36mdef[39;49;00m previousGitCommit = sh(script: [33m"git rev-parse ${gitCommit}~"[39;49;00m, returnStdout: [34mtrue[39;49;00m)
+     
+        stage([33m'Test'[39;49;00m) {
+          container([33m'news-classifier-builder'[39;49;00m) {
+            sh [33m"""[39;49;00m
+    [33m          pwd[39;49;00m
+    [33m          make -C models/news_classifier \[39;49;00m
+    [33m            install_dev \[39;49;00m
+    [33m            test [39;49;00m
+    [33m          """[39;49;00m
+          }
+        }
+    
+        [37m/* stage('Test integration') { */[39;49;00m
+          [37m/* container('news-classifier-builder') { */[39;49;00m
+            [37m/* sh 'models/news_classifier/integration/kind_test_all.sh' */[39;49;00m
+          [37m/* } */[39;49;00m
+        [37m/* } */[39;49;00m
+    
+        stage([33m'Promote application'[39;49;00m) {
+          container([33m'news-classifier-builder'[39;49;00m) {
+            withCredentials([[$class: [33m'UsernamePasswordMultiBinding'[39;49;00m,
+                  credentialsId: [33m'github-access'[39;49;00m,
+                  usernameVariable: [33m'GIT_USERNAME'[39;49;00m,
+                  passwordVariable: [33m'GIT_PASSWORD'[39;49;00m]]) {
+    
+              sh [33m'models/news_classifier/promote_application.sh'[39;49;00m
+            }
+          }
+        }
+      }
+    }
+
+
+## Replicable test and build environment
 
 In order to ensure that our test environments are versioned and replicable, we make use of the [Jenkins Kubernetes plugin](https://github.com/jenkinsci/kubernetes-plugin).
 This will allow us to create a Docker image with all the necessary tools for testing and building our models.
@@ -130,50 +220,9 @@ Using this image, we will then spin up a separate pod, where all our build instr
 
 Since it leverages Kubernetes underneath, this also ensure that our CI/CD pipelines are easily scalable.
 
+**TODO:** Add note on `podTemplate()` object.
 
-```python
-%%writefile jenkins-x.yml
-buildPack: none
-pipelineConfig:
-  pipelines:
-    release:
-      pipeline:
-        agent:
-          image: seldonio/core-builder:0.4
-        stages:
-          - name: test-sklearn-server
-            steps:
-            - name: run-tests
-              command: make
-              args:
-              - install_dev
-              - test
-    pullRequest:
-      pipeline:
-        agent:
-          image: seldonio/core-builder:0.4
-        stages:
-          - name: test-sklearn-server
-            steps:
-            - name: run-tests
-              command: make
-              args:
-              - install_dev
-              - test
-```
-
-    Overwriting jenkins-x.yml
-
-
-The `jenkins-x.yml` file is pretty easy to understand if we read through the different steps.
-
-Basically we can define the steps of what happens upon `release` - i.e. when a PR / Commit is added to master - and what happens upon `pullRequest` - whenever someone opens a pull request.
-
-You can see that the steps are exactly the same for both release and PR for now - namely, we run `make install_dev test` which basically installs all the dependencies and runs all the tests.
-
-
-
-### Integration and unit tests
+## Integration tests
 
 Now that we have a model that we want to be able to deploy, we want to make sure that we run end-to-end tests on that model to make sure everything works as expected.
 For this we will leverage the same framework that the Kubernetes team uses to test Kubernetes itself: [KIND](https://kind.sigs.k8s.io/).
@@ -188,36 +237,26 @@ The steps we'll have to carry out include:
 3. Leverage the `kind_test_all.sh` script that creates a KIND cluster and runs the tests.
 
 
-### Add docker auth to your cluster
+### Add integration stage to Jenkins
 
-Adding a docker authentication with Jenkins X can be done through a JX CLI command, which is the following:
+We can leverage Jenkins Pipelines to manage the different stages of our CI/CD pipeline.
+In particular, to add an integration stage, we can use the `stage()` object:
 
-* `jx create docker auth --host https://index.docker.io/v1/ --user $YOUR_DOCKER_USERNAME --secret $YOUR_DOCKER_KEY_SECRET --email $YOUR_DOCKER_EMAIL`
-
-This comamnd will use these credentials to authenticate with Docker and create an auth token (which expires).
-
-#### Extend JenkinsX file for integration
-
-Now that we have the test that would run for the integration tests, we need to extend the JX pipeline to run this.
-
-This extension is quite simple, and only requires adding the following line:
-    
-```
-            - name: run-end-to-end-tests
-              command: bash
-              args:
-              - integration/kind_test_all.sh
+```groovy
+stage('Test integration') {
+  container('news-classifier-builder') {
+    sh 'models/news_classifier/integration/kind_test_all.sh'
+  }
+}
 ```
 
-This line would be added in both the PR and release pipelines so that we can run integration tests then.
-
-#### Enable Docker
+### Enable Docker
 
 To test our models, we will need to build their respective containers, for which we will need Docker.
 
 In order to do so, we will first need to mount a few volumes into the CI/CD container.
 These basically consist of the core components that docker will need to be able to run.
-To mount them we will leverage the `volumes` argument of the `podTemplate()` method:
+To mount them we will leverage the `volumes` argument of the `podTemplate()` object:
 
 ```groovy
 podTemplate(...,
@@ -230,7 +269,7 @@ podTemplate(...,
 
 We then need to make sure that the pod can run with privileged context.
 This step is required in order to be able to run the `docker` daemon.
-To enable privileged permissions we will leverage the `privileged` flag of the `containerTemplate()` method and the `yaml` parameter of `podTemplate()`:
+To enable privileged permissions we will leverage the `privileged` flag of the `containerTemplate()` object and the `yaml` parameter of `podTemplate()`:
 
 
 ```groovy
@@ -251,7 +290,42 @@ podTemplate(...,
 ....)
 ```
 
-#### Run tests in Kind 
+
+```python
+
+```
+
+
+```python
+
+```
+
+
+```python
+
+```
+
+
+```python
+
+```
+
+
+```python
+
+```
+
+
+```python
+
+```
+
+
+```python
+
+```
+
+### Run tests in Kind 
 
 The `kind_run_all.sh` may seem complicated at first, but it's actually quite simple. 
 All the script does is set-up a kind cluster with all dependencies, deploy the model and clean everything up.
@@ -277,8 +351,6 @@ while true; do
     fi
 done
 ```
-
-
 
 Once we're running a docker daemon, we can run the command to create our KIND cluster, and install all the components.
 This will set up a Kubernetes cluster using the docker daemon (using containers as Nodes), and then install Ambassador + Seldon Core.
@@ -337,7 +409,7 @@ docker ps -aq | xargs -r docker rm -f || true
 service docker stop || true
 ```
 
-### Promote your application
+## Promote your application
 Now that we've verified that our CI pipeline is working, we want to promote our application to production
 
 This can be done with our JX CLI:
@@ -347,7 +419,7 @@ This can be done with our JX CLI:
 !jx promote application --...
 ```
 
-#### Test your production application
+## Test your production application
 
 Once your production application is deployed, you can test it using the same script, but in the `jx-production` namespace:
 
