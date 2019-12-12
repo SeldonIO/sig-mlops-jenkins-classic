@@ -25,6 +25,8 @@ The key pieces to note on the diagram are:
 
 ![CI/CD Pipeline](./images/pipeline-architecture.jpg)
 
+**TODO:** Link each type to its own folder.
+
 ### Model implementation repository
 
 From a high-level point of view, when a model implementation repository is updated by a Data Scientist or ML Engineer, the Jenkins CI will push changes to the [GitOps repository](#gitops-repository). This enables the following workflow:
@@ -98,22 +100,35 @@ This guide goes through three different methods to build and deploy your model.
 - Using custom re-usable servers.
 - Using custom servers with an embedded model.
 
-# Diving into our continuous integration
+# Diving into our CI/CD Pipeline
 
-**TODO:** Make this section general (applicable to the diff models)!
+On this section we will dive into the internals of the CI/CD pipeline for our [model implementation repositories](#model-implementation-repository).
+This includes a detailed description of the `Jenkinsfile`, as well as a look into our suggested testing methodology.
 
-**TODO:** Use Jenkins Classic instead of Jenkins X
+Note that this will cover a generic example.
+However, as we shall see, specialising this approach into any of our [three main use cases](#use-cases) will be straightforward.
 
-We have now separated our model development into two chunks: 
+## Jenkins Pipelines
 
-* The first one involves the creation of a model serve, and the second one involves the CI of the model server, and the second involves the deployment of models that create the model.
+We leverage [Jenkins Pipelines](https://jenkins.io/doc/book/pipeline/) in order to run our continous integration and delivery automation.
+From a high-level point of view, the pipeline configuration will be responsible for:
 
+- Define a **replicable** test and build environment.
+- Run the unit and integration tests (if applicable).
+- Promote the application into our staging and production environments.
+  As discussed [previously](#ci-cd-pipeline), the change will be promoted automatically to the staging environment and will require an approval in the production environment.
+  
+We can see a `Jenkinsfile` below taken from the [`news_classifier`](./models/news_classifier) example.
+This `Jenkinsfile` defines a pipeline which takes into account all of the points mentioned above.
+The following sections will dive into each of the sections in a much higher detail.
 
-## Using the Jenkins X pipeline
+### Replicable test and build environment
 
-In order to do this we will be able to first run some tests and the push to the docker repo.
+In order to ensure that our test environments are versioned and replicable, we make use of the [Jenkins Kubernetes plugin](https://github.com/jenkinsci/kubernetes-plugin).
+This will allow us to create a Docker image with all the necessary tools for testing and building our models.
+Using this image, we will then spin up a separate pod, where all our build instructions will be ran.
 
-For this we will be leveraging the Jenkins X file, we'll first start with a simple file that just runs the tests:
+Since it leverages Kubernetes underneath, this also ensure that our CI/CD pipelines are easily scalable.
 
 
 ```python
@@ -156,24 +171,24 @@ Basically we can define the steps of what happens upon `release` - i.e. when a P
 
 You can see that the steps are exactly the same for both release and PR for now - namely, we run `make install_dev test` which basically installs all the dependencies and runs all the tests.
 
-# Integration tests
+
+
+### Integration and unit tests
 
 Now that we have a model that we want to be able to deploy, we want to make sure that we run end-to-end tests on that model to make sure everything works as expected.
+For this we will leverage the same framework that the Kubernetes team uses to test Kubernetes itself: [KIND](https://kind.sigs.k8s.io/).
 
-For this we will leverage the same framework that the Kubernetes team uses to test Kubernetes itself: KIND.
+KIND stands for Kubernetes-in-Docker, and is used to isolate a Kubernetes environent for end-to-end tests.
+In our case, we will use this isolated environment to test our model.
 
-KIND stands for Kubernetes in Docker, and is used to isolate a Kubernetes environent for end-to-end tests.
+The steps we'll have to carry out include:
 
-In our case, we will be able to leverage to create an isolated environment, where we'll be able to test our model.
-
-For this, the steps we'll have to carry out include:
-
-1. Authenticate your docker with the jx CLI
-2. Add the steps in the `Jenkins-X.yml` to run this in the production cluster
-3. Leverage the `kind_run_all.sh` script that creates a KIND cluster and runs the tests
+1. Enable Docker within your CI/CD pod.
+2. Add an integration test stage.
+3. Leverage the `kind_test_all.sh` script that creates a KIND cluster and runs the tests.
 
 
-## Add docker auth to your cluster
+### Add docker auth to your cluster
 
 Adding a docker authentication with Jenkins X can be done through a JX CLI command, which is the following:
 
@@ -181,7 +196,7 @@ Adding a docker authentication with Jenkins X can be done through a JX CLI comma
 
 This comamnd will use these credentials to authenticate with Docker and create an auth token (which expires).
 
-## Extend JenkinsX file for integration
+#### Extend JenkinsX file for integration
 
 Now that we have the test that would run for the integration tests, we need to extend the JX pipeline to run this.
 
@@ -196,77 +211,55 @@ This extension is quite simple, and only requires adding the following line:
 
 This line would be added in both the PR and release pipelines so that we can run integration tests then.
 
-It is also possible to move the integration tests into a separate jenkins-x file such as `jenkins-x-integration.yml` by leveraging [Contexts & Schedules]() which basically allow us to extend the functionality of Prow by writing our own triggers, however this is outside the scope of this tutorial.
+#### Enable Docker
 
-### Config to provide docker authentication
+To test our models, we will need to build their respective containers, for which we will need Docker.
 
-This piece is slightly more extensive, as we will need to use Docker to build out containers due to the dependency on `s2i` to build the model wrappers.
+In order to do so, we will first need to mount a few volumes into the CI/CD container.
+These basically consist of the core components that docker will need to be able to run.
+To mount them we will leverage the `volumes` argument of the `podTemplate()` method:
 
-First we need to define the volumes that we'll be mounting to the container.
-
-The first few volumes before basically consist of the core components that docker will need to be able to run.
-```
-          volumes:
-            - name: modules
-              hostPath:
-                path: /lib/modules
-                type: Directory
-            - name: cgroup
-              hostPath:
-                path: /sys/fs/cgroup
-                type: Directory
-            - name: dind-storage
-              emptyDir: {}
-```
-We also want to mount the docker credentials which we will generate in the next step.
-```
-            - name: jenkins-docker-config-volume
-              secret:
-                items:
-                - key: config.json
-                  path: config.json
-                secretName: jenkins-docker-cfg
-```
-Once we've created the volumes, now we just need to mount them. This can be done as follows:
-```
-        options:
-          containerOptions:
-            volumeMounts:
-              - mountPath: /lib/modules
-                name: modules
-                readOnly: true
-              - mountPath: /sys/fs/cgroup
-                name: cgroup
-              - name: dind-storage
-                mountPath: /var/lib/docker                 
-```
-And finally we also mount the docker auth configuration so we don't have to run `docker login`:
-```
-              - mountPath: /builder/home/.docker
-                name: jenkins-docker-config-volume
+```groovy
+podTemplate(...,
+    volumes: [
+      hostPathVolume(mountPath: '/sys/fs/cgroup', hostPath: '/sys/fs/cgroup'),
+      hostPathVolume(mountPath: '/lib/modules', hostPath: '/lib/modules'),
+      emptyDirVolume(mountPath: '/var/lib/docker'),
+    ])
 ```
 
-And to finalise, we need to make sure that the pod can run with privileged context.
+We then need to make sure that the pod can run with privileged context.
+This step is required in order to be able to run the `docker` daemon.
+To enable privileged permissions we will leverage the `privileged` flag of the `containerTemplate()` method and the `yaml` parameter of `podTemplate()`:
 
-The reason why this is required is in order to be able to run the docker daemon:
+
+```groovy
+podTemplate(...,
+    containers: [
+      containerTemplate(
+          ...,
+          privileged: true,
+          ...
+      ),
+      ...],
+    yaml:'''
+    spec:
+      securityContext:
+        fsGroup: 1000
+      ...
+    ''',
+....)
 ```
-            securityContext:
-              privileged: true
-```
 
-## Kind run all integration tests script
+#### Run tests in Kind 
 
-The kind_run_all may seem complicated at first, but it's actually quite simple. 
-
+The `kind_run_all.sh` may seem complicated at first, but it's actually quite simple. 
 All the script does is set-up a kind cluster with all dependencies, deploy the model and clean everything up.
-
 Let's break down each of the components within the script.
-
-#### Start docker
 
 We first start the docker daemon and wait until Docker is running (using `docker ps q` for guidance.
 
-```
+```bash
 # FIRST WE START THE DOCKER DAEMON
 service docker start
 # the service can be started but the docker socket not ready, wait for ready
@@ -285,13 +278,13 @@ while true; do
 done
 ```
 
-#### Create and set-up KIND cluster
+
 
 Once we're running a docker daemon, we can run the command to create our KIND cluster, and install all the components.
+This will set up a Kubernetes cluster using the docker daemon (using containers as Nodes), and then install Ambassador + Seldon Core.
 
-This will set up a Kubnernetes cluster using the docker daemon (using containers as Nodes), and then install Ambassador + Seldon Core.
 
-```
+```bash
 #######################################
 # AVOID EXIT ON ERROR FOR FOLLOWING CMDS
 set +o errexit
@@ -310,11 +303,9 @@ if [[ ${KIND_EXIT_VALUE} -eq 0 ]]; then
     SETUP_EXIT_VALUE=$?
 ```
 
-#### Run python tests
-
 We can now run the tests; for this we run all the dev installations and kick off our tests (which we'll add inside of the integration folder).
 
-```
+```bash
     # BUILD S2I BASE IMAGES
     make build
     S2I_EXIT_VALUE=$?
@@ -329,11 +320,10 @@ We can now run the tests; for this we run all the dev installations and kick off
 fi
 ```
 
-#### Clean up
 
 Finally we just clean everything, including the cluster, the containers and the docker daemon.
 
-```
+```bash
 # DELETE KIND CLUSTER
 make kind_delete_cluster
 DELETE_EXIT_VALUE=$?
@@ -347,8 +337,7 @@ docker ps -aq | xargs -r docker rm -f || true
 service docker stop || true
 ```
 
-
-# Promote your application
+### Promote your application
 Now that we've verified that our CI pipeline is working, we want to promote our application to production
 
 This can be done with our JX CLI:
@@ -358,7 +347,7 @@ This can be done with our JX CLI:
 !jx promote application --...
 ```
 
-## Test your production application
+#### Test your production application
 
 Once your production application is deployed, you can test it using the same script, but in the `jx-production` namespace:
 
@@ -380,9 +369,4 @@ sc = SeldonClient(
 response = sc.predict(data=np.array([twenty_test.data[0]]))
 
 response.response.data
-```
-
-
-```python
-
 ```
