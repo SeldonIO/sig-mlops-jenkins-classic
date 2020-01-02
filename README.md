@@ -455,6 +455,53 @@ This will be handled by the `promote_application.sh` script, which can be seen b
       https://api.github.com/repos/[31m$GITOPS_ORG[39;49;00m/[31m$GITOPS_REPO[39;49;00m/issues/[31m$ISSUE_NUMBER[39;49;00m
 
 
+# Creating a CI/CD pipeline
+
+In order to add a pipeline to Jenkins, you just have to go to the "Manage Jenkins" configuration dashboard, and click on "New Item" to create a new pipeline.
+
+**TODO**: Add picture.
+
+In the first menu, we'll add a name.
+For example, we can create a new pipeline with name `news_classifier`.
+We will then be able to add the specific details.
+Most of these will remain on "default", but we will need to change a couple of them to add a GitHub trigger, Docker access and to point to the right folder within the repository.
+
+Firstly, we will change the following:
+
+* GitHub hook trigger for GITScm polling. 
+* Tick "This project is parameterised", and then when you see the next dialog:
+    * Click on the "Add parameter" dropdown, and select "Credential Parameter".
+    * This will open yet another box, where you want to provide the following details:
+        * name: `docker-access`
+        * Credential type "Username and Password"
+        * Tick: required
+        * Default value: Click on the "Add" dropdown, and then on "Jenkins provider":
+            * This has opened another dialog box, where you want to add your docker credentials.
+            * For this you need to make sure that the current selected option is "Username and Password".
+            * There you have to enter your Docker username, and for password it's advised to use a Docker API Key.
+            
+**TODO**: Add picture with boxes.
+
+Lastly, we will need to point to the right `Jenkinsfile`.
+Note that since we are working with a monorepository, where multiple model implementations are tracked, we will need to point our pipeline to the `./models/news_classifier` folder.
+If we were working with a single model implementation repository, we would only need to point to the global repo.
+
+* Select "Pipeline script from SCM" from dropdown.
+* Add the repository as SCM (in this case https://github.com/SeldonIO/sig-mlops-jenkins-classic/)
+* Point to the right `Jenkinsfile` under "Script Path". In this case, `models/news_classifier/Jenkinsfile`.
+* If needed, add credentials that will allow to access private repos.
+
+**TODO**: Add picture with SCM settings.
+
+## Running pipeline
+
+In order to trigger a new build, we can do it manually by clicking on "Build with Parameters" and then on "Build" or we can just push a new change to our GitHub repo.
+This will take us to a view where we can see some details about each of the stages of the latest builds. 
+
+**TODO**: Add picture about with different stages.
+
+# Set up the K8s cluster
+
 
 ```python
 
