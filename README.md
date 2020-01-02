@@ -76,21 +76,13 @@ This would be different to the model implementation repository as it would only 
 ## Set up
 
 As a pre-requisite you need to ensure that have access to a Kubernetes cluster.
-In particular, this guide requires the following pre- requisites:
+In particular, this guide requires the following pre-requisites:
 
 - A Kubernetes cluster running v1.13+.
-- Jenkins Classic installed in your cluster.
+- Jenkins Classic installed in your cluster. You can find instructions on how to install and configure it on the [Installing Jenkins on your K8s cluster](#Installing-Jenkins-on-your-K8s-cluster) section.
 - Seldon Core v0.5.1 installed in your cluster.
 
 **TODO:** Add note on ArgoCD (or Seldon Deploy??)
-
-### Jenkins Config
-
-The configurations required in the Jenkins server are:
-
-- Install the GitHub Plugin [(for automated webhook triggers)](https://support.cloudbees.com/hc/en-us/articles/115003015691-GitHub-Webhook-Non-Multibranch-Jobs).
-- Provide a GitHub token with read access so it can clone relevant repositories.
-- Set-up webhooks so that GitHub can send push requests.
 
 ## Use cases
 
@@ -500,7 +492,45 @@ This will take us to a view where we can see some details about each of the stag
 
 **TODO**: Add picture about with different stages.
 
-# Set up the K8s cluster
+# Installing Jenkins on your K8s cluster
+
+If you already have access to a cluster but which doesn't have Jenkins installed, you can do so easily using Helm.
+In particular, you will need to run the following:
+
+
+```python
+!helm install \
+    --name "jenkins" stable/jenkins \
+    --namespace "jenkins" \
+    --set "rbac.create=true" \
+    --set "master.adminUser=admin" \
+    --set "master.adminPassword=admin" \
+    --set "master.serviceType=LoadBalancer"
+```
+
+This will install Jenkins and all the required services in the cluster.
+To get the Load Balancer where it can be accessed you can run:
+
+
+```python
+!kubectl get svc -n jenkins | grep jenkins
+```
+
+## Further configuration 
+
+If you wish to set up automated pipeline triggers, you will have to install the "GitHub" plugin (there are quite a few github related ones but the one you want is the one called plainly "GitHub", which then will allow for triggering pipelines automatically on commit
+
+- Install the GitHub Plugin [(for automated webhook triggers)](https://support.cloudbees.com/hc/en-us/articles/115003015691-GitHub-Webhook-Non-Multibranch-Jobs).
+- Provide a GitHub token with read access so it can clone relevant repositories.
+- Set-up webhooks so that GitHub can send push requests.
+
+### Make sure plugins are updated
+
+If you try to run a pipeline and you get an error such as "No Such DSL Method", or any strange Java exception when running a pipeline, the most probably reason is due to current plugins not being up to date. 
+
+Updating your plugins can be done by going to "Manage Jenkins" -> "Plugins", and then selecct all the plugins and click "Update and load after restart". This will take you to another screen - there you should tick the checkbox that reads "restart after plugins are downloaded and installed".
+
+Once you update our plugins you should be ready to go.
 
 
 ```python
