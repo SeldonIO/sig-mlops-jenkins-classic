@@ -109,7 +109,6 @@ The following sections will dive into each of the sections in a much higher deta
 
 ```python
 %%writefile ./models/news_classifier/Jenkinsfile
-
 //properties([pipelineTriggers([githubPush()])])
 
 def label = "worker-${UUID.randomUUID().toString()}"
@@ -378,7 +377,6 @@ This will be handled by the `promote_application.sh` script, which can be seen b
 
 ```python
 %%writefile ./models/news_classifier/promote_application.sh
-
 #!/bin/bash
 
 # ENSURE WE ARE IN THE DIR OF SCRIPT
