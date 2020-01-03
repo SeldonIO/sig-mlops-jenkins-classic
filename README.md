@@ -25,8 +25,6 @@ The key pieces to note on the diagram are:
 
 ![CI/CD Pipeline](./images/pipeline-architecture.jpg)
 
-**TODO:** Link each type to its own folder.
-
 ### Model implementation repository
 
 From a high-level point of view, when a model implementation repository is updated by a Data Scientist or ML Engineer, the Jenkins CI will push changes to the [GitOps repository](#gitops-repository). This enables the following workflow:
@@ -56,8 +54,6 @@ This may be desired if there are non-standard linux libraries or non-standard de
 
 ### GitOps repository
 
-**TODO:** All resources? Helm charts or just specs?
-
 The state of each of our environments (e.g. production or staging) is stored on a GitOps repository.
 This repository contains all the different Kubernetes resources that have been deployed to each cluster.
 It is linked through ArgoCD to each of our Kubernetes clusters (or namespaces) so that a change in the repository triggers an update of our environment.
@@ -82,16 +78,13 @@ In particular, this guide requires the following pre-requisites:
 - Jenkins Classic installed in your cluster. You can find instructions on how to install and configure it on the [Installing Jenkins on your K8s cluster](#Installing-Jenkins-on-your-K8s-cluster) section.
 - Seldon Core v0.5.1 installed in your cluster.
 
-**TODO:** Add note on ArgoCD (or Seldon Deploy??)
-
 ## Use cases
 
-**TODO:** Add links to separate notebooks.
-
 This guide goes through three different methods to build and deploy your model.
+Each of these can be found under the `./models/` of this repository.
 
-- Using Seldon pre-built re-usable model servers. 
-- Using custom re-usable servers.
+- Using Seldon pre-built re-usable model servers (`./models/news_classifier`). 
+- Using custom re-usable servers (`./models/images_classifier`).
 - Using custom servers with an embedded model.
 
 # Diving into our CI/CD Pipeline
@@ -210,10 +203,9 @@ The following sections will dive into each of the sections in a much higher deta
 In order to ensure that our test environments are versioned and replicable, we make use of the [Jenkins Kubernetes plugin](https://github.com/jenkinsci/kubernetes-plugin).
 This will allow us to create a Docker image with all the necessary tools for testing and building our models.
 Using this image, we will then spin up a separate pod, where all our build instructions will be ran.
+We will use the `podTemplate()` object in the Jenkins Pipeline configuration to define the requirements of this pod.
 
 Since it leverages Kubernetes underneath, this also ensure that our CI/CD pipelines are easily scalable.
-
-**TODO:** Add note on `podTemplate()` object.
 
 ## Integration tests
 
@@ -451,7 +443,8 @@ This will be handled by the `promote_application.sh` script, which can be seen b
 
 In order to add a pipeline to Jenkins, you just have to go to the "Manage Jenkins" configuration dashboard, and click on "New Item" to create a new pipeline.
 
-**TODO**: Add picture.
+![New Item](./images/new-item.png)
+
 
 In the first menu, we'll add a name.
 For example, we can create a new pipeline with name `news_classifier`.
@@ -471,8 +464,8 @@ Firstly, we will change the following:
             * This has opened another dialog box, where you want to add your docker credentials.
             * For this you need to make sure that the current selected option is "Username and Password".
             * There you have to enter your Docker username, and for password it's advised to use a Docker API Key.
-            
-**TODO**: Add picture with boxes.
+
+![Pipeline Config](./images/pipeline-config.png)
 
 Lastly, we will need to point to the right `Jenkinsfile`.
 Note that since we are working with a monorepository, where multiple model implementations are tracked, we will need to point our pipeline to the `./models/news_classifier` folder.
@@ -483,14 +476,14 @@ If we were working with a single model implementation repository, we would only 
 * Point to the right `Jenkinsfile` under "Script Path". In this case, `models/news_classifier/Jenkinsfile`.
 * If needed, add credentials that will allow to access private repos.
 
-**TODO**: Add picture with SCM settings.
+![SCM Config](./images/scm-config.png)
 
 ## Running pipeline
 
 In order to trigger a new build, we can do it manually by clicking on "Build with Parameters" and then on "Build" or we can just push a new change to our GitHub repo.
 This will take us to a view where we can see some details about each of the stages of the latest builds. 
 
-**TODO**: Add picture about with different stages.
+![Pipeline Stages](./images/pipeline-stages.png)
 
 # Installing Jenkins on your K8s cluster
 
@@ -498,8 +491,9 @@ If you already have access to a cluster but which doesn't have Jenkins installed
 In particular, you will need to run the following:
 
 
-```python
-!helm install \
+```bash
+%%bash
+helm install \
     --name "jenkins" stable/jenkins \
     --namespace "jenkins" \
     --set "rbac.create=true" \
@@ -512,8 +506,9 @@ This will install Jenkins and all the required services in the cluster.
 To get the Load Balancer where it can be accessed you can run:
 
 
-```python
-!kubectl get svc -n jenkins | grep jenkins
+```bash
+%%bash
+kubectl get svc -n jenkins | grep jenkins
 ```
 
 ## Further configuration 
@@ -531,8 +526,3 @@ If you try to run a pipeline and you get an error such as "No Such DSL Method", 
 Updating your plugins can be done by going to "Manage Jenkins" -> "Plugins", and then selecct all the plugins and click "Update and load after restart". This will take you to another screen - there you should tick the checkbox that reads "restart after plugins are downloaded and installed".
 
 Once you update our plugins you should be ready to go.
-
-
-```python
-
-```
