@@ -3,14 +3,14 @@ VERSION := $(shell cat VERSION)
 readme:
 	jupyter nbconvert README.ipynb --to markdown
 
-make train_model: install_dev
-	(cd src && python train_model.py)
+train_model: install_dev
+	cd src && python train_model.py
 
-make test:
-	(cd src && \
-		pytest -s --verbose -W ignore --log-level=INFO 2>&1)
+test:
+	cd src && \
+		pytest -s --verbose -W ignore --log-level=INFO 2>&1
 
-make install_dev:
+install_dev:
 	pip install -r src/requirements.txt
 
 # INTEGRATION TESTS

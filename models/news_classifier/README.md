@@ -13,34 +13,37 @@ We will need the following dependencies in order to run the Python code:
 
 
 ```python
-!pygmentize src/requirements.txt
+%%writefile ./src/requirements.txt
+# You need the right versions for your model server:
+# Model servers: https://docs.seldon.io/projects/seldon-core/en/latest/servers/overview.html
+
+# For SKLearn you need a pickle and the following:
+scikit-learn==0.20.3 # See https://docs.seldon.io/projects/seldon-core/en/latest/servers/sklearn.html
+joblib==0.13.2
+
+# For XGBoost you need v 0.82 and an xgboost export (not a pickle)
+#xgboost==0.82
+
+# For MLFlow you need the following, and a link to the built model:
+#mlflow==1.1.0
+#pandas==0.25
+
+# For tensorflow, any models supported by tensorflow serving (less than v2.0)
+
+# For testing
+pytest==5.1.1
+
 ```
 
-    # You need the right versions for your model server:
-    # Model servers: https://docs.seldon.io/projects/seldon-core/en/latest/servers/overview.html
-    
-    # For SKLearn you need a pickle and the following:
-    scikit-learn==0.20.3 # See https://docs.seldon.io/projects/seldon-core/en/latest/servers/sklearn.html
-    joblib==0.13.2
-    
-    # For XGBoost you need v 0.82 and an xgboost export (not a pickle)
-    #xgboost==0.82
-    
-    # For MLFlow you need the following, and a link to the built model:
-    #mlflow==1.1.0
-    #pandas==0.25
-    
-    # For tensorflow, any models supported by tensorflow serving (less than v2.0)
-    
-    # For testing
-    pytest==5.1.1
+    Overwriting ./src/requirements.txt
 
 
 We can now install the dependencies using the make command:
 
 
-```python
-!make install_dev
+```bash
+%%bash
+make install_dev
 ```
 
     cat: VERSION: No such file or directory
@@ -215,27 +218,30 @@ We'll write a very simple unit test that make sure that the model loads and runs
 
 
 ```python
-!pygmentize src/test_model.py
+%%writefile src/test_model.py
+import numpy as np
+from unittest import mock
+import joblib
+import os
+
+EXPECTED_RESPONSE = np.array([3, 3])
+
+def test_model(*args, **kwargs):
+    data = ["text 1", "text 2"]
+
+    m = joblib.load("model.joblib")
+    result = m.predict(data)
+    assert all(result == EXPECTED_RESPONSE)
+
 ```
 
-    [34mimport[39;49;00m [04m[36mnumpy[39;49;00m [34mas[39;49;00m [04m[36mnp[39;49;00m
-    [34mfrom[39;49;00m [04m[36munittest[39;49;00m [34mimport[39;49;00m mock
-    [34mimport[39;49;00m [04m[36mjoblib[39;49;00m
-    [34mimport[39;49;00m [04m[36mos[39;49;00m
-    
-    EXPECTED_RESPONSE = np.array([[34m3[39;49;00m, [34m3[39;49;00m])
-    
-    [34mdef[39;49;00m [32mtest_model[39;49;00m(*args, **kwargs):
-        data = [[33m"[39;49;00m[33mtext 1[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mtext 2[39;49;00m[33m"[39;49;00m]
-    
-        m = joblib.load([33m"[39;49;00m[33mmodel.joblib[39;49;00m[33m"[39;49;00m)
-        result = m.predict(data)
-        [34massert[39;49;00m [36mall[39;49;00m(result == EXPECTED_RESPONSE)
+    Overwriting src/test_model.py
 
 
 
-```python
-!make test
+```bash
+%%bash
+make test
 ```
 
     cat: VERSION: No such file or directory
@@ -263,38 +269,40 @@ We can also now update the integration tests. This is another very simple step, 
 
 
 ```python
-!pygmentize integration/test_e2e_seldon_model_server.py
+%%writefile integration/test_e2e_seldon_model_server.py
+from seldon_core.seldon_client import SeldonClient
+from seldon_core.utils import seldon_message_to_json
+import numpy as np
+from subprocess import run
+import time
+import logging
+
+
+API_AMBASSADOR = "localhost:8003"
+
+def test_sklearn_server():
+    data = ["From: brian@ucsd.edu (Brian Kantor)\nSubject: Re: HELP for Kidney Stones ..............\nOrganization: The Avant-Garde of the Now, Ltd.\nLines: 12\nNNTP-Posting-Host: ucsd.edu\n\nAs I recall from my bout with kidney stones, there isn't any\nmedication that can do anything about them except relieve the pain.\n\nEither they pass, or they have to be broken up with sound, or they have\nto be extracted surgically.\n\nWhen I was in, the X-ray tech happened to mention that she'd had kidney\nstones and children, and the childbirth hurt less.\n\nDemerol worked, although I nearly got arrested on my way home when I barfed\nall over the police car parked just outside the ER.\n\t- Brian\n",
+            'From: rind@enterprise.bih.harvard.edu (David Rind)\nSubject: Re: Candida(yeast) Bloom, Fact or Fiction\nOrganization: Beth Israel Hospital, Harvard Medical School, Boston Mass., USA\nLines: 37\nNNTP-Posting-Host: enterprise.bih.harvard.edu\n\nIn article <1993Apr26.103242.1@vms.ocom.okstate.edu>\n banschbach@vms.ocom.okstate.edu writes:\n>are in a different class.  The big question seems to be is it reasonable to \n>use them in patients with GI distress or sinus problems that *could* be due \n>to candida blooms following the use of broad-spectrum antibiotics?\n\nI guess I\'m still not clear on what the term "candida bloom" means,\nbut certainly it is well known that thrush (superficial candidal\ninfections on mucous membranes) can occur after antibiotic use.\nThis has nothing to do with systemic yeast syndrome, the "quack"\ndiagnosis that has been being discussed.\n\n\n>found in the sinus mucus membranes than is candida.  Women have been known \n>for a very long time to suffer from candida blooms in the vagina and a \n>women is lucky to find a physician who is willing to treat the cause and \n>not give give her advise to use the OTC anti-fungal creams.\n\nLucky how?  Since a recent article (randomized controlled trial) of\noral yogurt on reducing vaginal candidiasis, I\'ve mentioned to a \nnumber of patients with frequent vaginal yeast infections that they\ncould try eating 6 ounces of yogurt daily.  It turns out most would\nrather just use anti-fungal creams when they get yeast infections.\n\n>yogurt dangerous).  If this were a standard part of medical practice, as \n>Gordon R. says it is, then the incidence of GI distress and vaginal yeast \n>infections should decline.\n\nAgain, this just isn\'t what the systemic yeast syndrome is about, and\nhas nothing to do with the quack therapies that were being discussed.\nThere is some evidence that attempts to reinoculate the GI tract with\nbacteria after antibiotic therapy don\'t seem to be very helpful in\nreducing diarrhea, but I don\'t think anyone would view this as a\nquack therapy.\n-- \nDavid Rind\nrind@enterprise.bih.harvard.edu\n']
+    labels = [2.0, 2.0]
+    
+    sc = SeldonClient(
+        gateway="ambassador",
+        gateway_endpoint=API_AMBASSADOR,
+        deployment_name="seldon-model-server",
+        payload_type="ndarray",
+        namespace="seldon",
+        transport="rest")
+
+    sm_result = sc.predict(data=np.array(data))
+    logging.info(sm_result)
+    result = seldon_message_to_json(sm_result.response)
+    logging.info(result)
+    values = result.get("data", {}).get("ndarray", {})
+    assert (values == labels)
+
 ```
 
-    [34mfrom[39;49;00m [04m[36mseldon_core.seldon_client[39;49;00m [34mimport[39;49;00m SeldonClient
-    [34mfrom[39;49;00m [04m[36mseldon_core.utils[39;49;00m [34mimport[39;49;00m seldon_message_to_json
-    [34mimport[39;49;00m [04m[36mnumpy[39;49;00m [34mas[39;49;00m [04m[36mnp[39;49;00m
-    [34mfrom[39;49;00m [04m[36msubprocess[39;49;00m [34mimport[39;49;00m run
-    [34mimport[39;49;00m [04m[36mtime[39;49;00m
-    [34mimport[39;49;00m [04m[36mlogging[39;49;00m
-    
-    
-    API_AMBASSADOR = [33m"[39;49;00m[33mlocalhost:8003[39;49;00m[33m"[39;49;00m
-    
-    [34mdef[39;49;00m [32mtest_sklearn_server[39;49;00m():
-        data = [[33m"[39;49;00m[33mFrom: brian@ucsd.edu (Brian Kantor)[39;49;00m[33m\n[39;49;00m[33mSubject: Re: HELP for Kidney Stones ..............[39;49;00m[33m\n[39;49;00m[33mOrganization: The Avant-Garde of the Now, Ltd.[39;49;00m[33m\n[39;49;00m[33mLines: 12[39;49;00m[33m\n[39;49;00m[33mNNTP-Posting-Host: ucsd.edu[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33mAs I recall from my bout with kidney stones, there isn[39;49;00m[33m'[39;49;00m[33mt any[39;49;00m[33m\n[39;49;00m[33mmedication that can do anything about them except relieve the pain.[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33mEither they pass, or they have to be broken up with sound, or they have[39;49;00m[33m\n[39;49;00m[33mto be extracted surgically.[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33mWhen I was in, the X-ray tech happened to mention that she[39;49;00m[33m'[39;49;00m[33md had kidney[39;49;00m[33m\n[39;49;00m[33mstones and children, and the childbirth hurt less.[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33mDemerol worked, although I nearly got arrested on my way home when I barfed[39;49;00m[33m\n[39;49;00m[33mall over the police car parked just outside the ER.[39;49;00m[33m\n[39;49;00m[33m\t[39;49;00m[33m- Brian[39;49;00m[33m\n[39;49;00m[33m"[39;49;00m,
-                [33m'[39;49;00m[33mFrom: rind@enterprise.bih.harvard.edu (David Rind)[39;49;00m[33m\n[39;49;00m[33mSubject: Re: Candida(yeast) Bloom, Fact or Fiction[39;49;00m[33m\n[39;49;00m[33mOrganization: Beth Israel Hospital, Harvard Medical School, Boston Mass., USA[39;49;00m[33m\n[39;49;00m[33mLines: 37[39;49;00m[33m\n[39;49;00m[33mNNTP-Posting-Host: enterprise.bih.harvard.edu[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33mIn article <1993Apr26.103242.1@vms.ocom.okstate.edu>[39;49;00m[33m\n[39;49;00m[33m banschbach@vms.ocom.okstate.edu writes:[39;49;00m[33m\n[39;49;00m[33m>are in a different class.  The big question seems to be is it reasonable to [39;49;00m[33m\n[39;49;00m[33m>use them in patients with GI distress or sinus problems that *could* be due [39;49;00m[33m\n[39;49;00m[33m>to candida blooms following the use of broad-spectrum antibiotics?[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33mI guess I[39;49;00m[33m\'[39;49;00m[33mm still not clear on what the term [39;49;00m[33m"[39;49;00m[33mcandida bloom[39;49;00m[33m"[39;49;00m[33m means,[39;49;00m[33m\n[39;49;00m[33mbut certainly it is well known that thrush (superficial candidal[39;49;00m[33m\n[39;49;00m[33minfections on mucous membranes) can occur after antibiotic use.[39;49;00m[33m\n[39;49;00m[33mThis has nothing to do with systemic yeast syndrome, the [39;49;00m[33m"[39;49;00m[33mquack[39;49;00m[33m"[39;49;00m[33m\n[39;49;00m[33mdiagnosis that has been being discussed.[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33m>found in the sinus mucus membranes than is candida.  Women have been known [39;49;00m[33m\n[39;49;00m[33m>for a very long time to suffer from candida blooms in the vagina and a [39;49;00m[33m\n[39;49;00m[33m>women is lucky to find a physician who is willing to treat the cause and [39;49;00m[33m\n[39;49;00m[33m>not give give her advise to use the OTC anti-fungal creams.[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33mLucky how?  Since a recent article (randomized controlled trial) of[39;49;00m[33m\n[39;49;00m[33moral yogurt on reducing vaginal candidiasis, I[39;49;00m[33m\'[39;49;00m[33mve mentioned to a [39;49;00m[33m\n[39;49;00m[33mnumber of patients with frequent vaginal yeast infections that they[39;49;00m[33m\n[39;49;00m[33mcould try eating 6 ounces of yogurt daily.  It turns out most would[39;49;00m[33m\n[39;49;00m[33mrather just use anti-fungal creams when they get yeast infections.[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33m>yogurt dangerous).  If this were a standard part of medical practice, as [39;49;00m[33m\n[39;49;00m[33m>Gordon R. says it is, then the incidence of GI distress and vaginal yeast [39;49;00m[33m\n[39;49;00m[33m>infections should decline.[39;49;00m[33m\n[39;49;00m[33m\n[39;49;00m[33mAgain, this just isn[39;49;00m[33m\'[39;49;00m[33mt what the systemic yeast syndrome is about, and[39;49;00m[33m\n[39;49;00m[33mhas nothing to do with the quack therapies that were being discussed.[39;49;00m[33m\n[39;49;00m[33mThere is some evidence that attempts to reinoculate the GI tract with[39;49;00m[33m\n[39;49;00m[33mbacteria after antibiotic therapy don[39;49;00m[33m\'[39;49;00m[33mt seem to be very helpful in[39;49;00m[33m\n[39;49;00m[33mreducing diarrhea, but I don[39;49;00m[33m\'[39;49;00m[33mt think anyone would view this as a[39;49;00m[33m\n[39;49;00m[33mquack therapy.[39;49;00m[33m\n[39;49;00m[33m-- [39;49;00m[33m\n[39;49;00m[33mDavid Rind[39;49;00m[33m\n[39;49;00m[33mrind@enterprise.bih.harvard.edu[39;49;00m[33m\n[39;49;00m[33m'[39;49;00m]
-        labels = [[34m2.0[39;49;00m, [34m2.0[39;49;00m]
-        
-        sc = SeldonClient(
-            gateway=[33m"[39;49;00m[33mambassador[39;49;00m[33m"[39;49;00m,
-            gateway_endpoint=API_AMBASSADOR,
-            deployment_name=[33m"[39;49;00m[33mseldon-model-server[39;49;00m[33m"[39;49;00m,
-            payload_type=[33m"[39;49;00m[33mndarray[39;49;00m[33m"[39;49;00m,
-            namespace=[33m"[39;49;00m[33mseldon[39;49;00m[33m"[39;49;00m,
-            transport=[33m"[39;49;00m[33mrest[39;49;00m[33m"[39;49;00m)
-    
-        sm_result = sc.predict(data=np.array(data))
-        logging.info(sm_result)
-        result = seldon_message_to_json(sm_result.response)
-        logging.info(result)
-        values = result.get([33m"[39;49;00m[33mdata[39;49;00m[33m"[39;49;00m, {}).get([33m"[39;49;00m[33mndarray[39;49;00m[33m"[39;49;00m, {})
-        [34massert[39;49;00m (values == labels)
+    Overwriting integration/test_e2e_seldon_model_server.py
 
 
 ### Now push your changes to trigger the pipeline
@@ -309,60 +317,73 @@ git add .
 git push origin master
 ```
 
-We can now see that the pipeline has been triggered by viewing our activities:
+We can now see that the pipeline has been triggered by going to the Status page inside Jenkins pipeline:
 
+![Pipeline Progress](./images/pipeline-progress.png)
 
+Similarly we can actually see the logs of our running job by going to the Console Output page:
 
-```python
-!jx get activity -f sig-mlops-seldon-jenkins-x | tail
-```
+![Build logs](./images/build-logs.png)
 
-        Create Effective Pipeline                          11h28m57s       7s Succeeded 
-        Create Tekton Crds                                 11h28m50s      11s Succeeded 
-      test and deploy sklearn server                       11h28m38s    1m54s Succeeded 
-        Credential Initializer 59hx6                       11h28m38s       0s Succeeded 
-        Working Dir Initializer Fslpm                      11h28m38s       1s Succeeded 
-        Place Tools                                        11h28m37s       1s Succeeded 
-        Git Source Seldonio Sig Mlops Seldon Jenki Ftjtn   11h28m36s       6s Succeeded https://github.com/SeldonIO/sig-mlops-seldon-jenkins-x.git
-        Git Merge                                          11h28m30s       1s Succeeded 
-        Run Tests                                          11h28m29s      13s Succeeded 
-        Build And Push Images                              11h28m16s    1m32s Succeeded 
+## Managing your ML Application
 
-
-Similarly we can actually see the logs of our running job:
+Now that we've deployed our MLOps repo, Argo CD will sync the model implementation repository charts with our Staging environ ment automatically.
 
 
 ```bash
 %%bash
-YOUR_GIT_USERNAME=SeldonIO
-jx get build logs "$YOUR_GIT_USERNAME/sig-mlops-seldon-jenkins-x/master #7 release" | tail
+kubectl get pods -n staging
 ```
 
-    error: Failed to parse docker reference ELDON_BASE_WRAPPER
-    ERROR: An error occurred: unable to get metadata for ELDON_BASE_WRAPPER:latest
-    ERROR: Suggested solution: check image name
-    ERROR: If the problem persists consult the docs at https://github.com/openshift/source-to-image/tree/master/docs. Eventually reach us on freenode #openshift or file an issue at https://github.com/openshift/source-to-image/issues providing us with a log from your build using log output level 3.
-    Makefile:8: recipe for target 'build' failed
-    make: *** [build] Error 1
-    Stopping Docker: dockerProgram process in pidfile '/var/run/docker-ssd.pid', 1 process(es), refused to die.
-    [31m
-    Pipeline failed on stage 'test-and-deploy-sklearn-server' : container 'step-build-and-push-images'. The execution of the pipeline has stopped.[0m
+    The connection to the server 127.0.0.1:39517 was refused - did you specify the right host or port?
+
+
+
+    ---------------------------------------------------------------------------
+
+    CalledProcessError                        Traceback (most recent call last)
+
+    <ipython-input-7-1e3acf7f2973> in <module>
+    ----> 1 get_ipython().run_cell_magic('bash', '', 'kubectl get pods -n staging\n')
     
 
-
-    wrote: /tmp/086bfe4e-d4ac-46e6-baa1-71d4ef7abca4095596018
-
-
-## Managing your Jenkins X Application
-
-Now that we've deployed our MLOps repo, Jenkins X now has created an application from our charts.
-
-This application gets automatically syncd into the Jenkins X staging environment, which you can see:
+    ~/.virtualenvs/sig-mlops/lib/python3.6/site-packages/IPython/core/interactiveshell.py in run_cell_magic(self, magic_name, line, cell)
+       2350             with self.builtin_trap:
+       2351                 args = (magic_arg_s, cell)
+    -> 2352                 result = fn(*args, **kwargs)
+       2353             return result
+       2354 
 
 
-```python
-!kubectl get pods -n jx-staging
-```
+    ~/.virtualenvs/sig-mlops/lib/python3.6/site-packages/IPython/core/magics/script.py in named_script_magic(line, cell)
+        140             else:
+        141                 line = script
+    --> 142             return self.shebang(line, cell)
+        143 
+        144         # write a basic docstring:
+
+
+    </home/agm/.virtualenvs/sig-mlops/lib/python3.6/site-packages/decorator.py:decorator-gen-110> in shebang(self, line, cell)
+
+
+    ~/.virtualenvs/sig-mlops/lib/python3.6/site-packages/IPython/core/magic.py in <lambda>(f, *a, **k)
+        185     # but it's overkill for just that one bit of state.
+        186     def magic_deco(arg):
+    --> 187         call = lambda f, *a, **k: f(*a, **k)
+        188 
+        189         if callable(arg):
+
+
+    ~/.virtualenvs/sig-mlops/lib/python3.6/site-packages/IPython/core/magics/script.py in shebang(self, line, cell)
+        243             sys.stderr.flush()
+        244         if args.raise_error and p.returncode!=0:
+    --> 245             raise CalledProcessError(p.returncode, cell, output=out, stderr=err)
+        246 
+        247     def _run_script(self, p, cell, to_close):
+
+
+    CalledProcessError: Command 'b'kubectl get pods -n staging\n'' returned non-zero exit status 1.
+
 
 ### Test your application in the staging environment
 
@@ -378,7 +399,7 @@ sc = SeldonClient(
     gateway_endpoint="localhost:80",
     deployment_name="mlops-server",
     payload_type="ndarray",
-    namespace="jx-staging",
+    namespace="staging",
     transport="rest")
 
 response = sc.predict(data=np.array([twenty_test.data[0]]))
@@ -402,7 +423,7 @@ response.response.data
 %%bash
 curl -X POST -H 'Content-Type: application/json' \
      -d "{'data': {'names': ['text'], 'ndarray': ['Hello world this is a test']}}" \
-    http://localhost/seldon/jx-staging/news-classifier-server/api/v0.1/predictions
+    http://localhost/seldon/staging/news-classifier-server/api/v0.1/predictions
 ```
 
     {
