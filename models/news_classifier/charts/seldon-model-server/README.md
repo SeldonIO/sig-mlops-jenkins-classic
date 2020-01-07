@@ -1,1 +1,1 @@
-# Seldon Model Server for MLOps (JX Application)
+# Seldon Model Server for MLOps
