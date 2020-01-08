@@ -22,12 +22,11 @@ test_integration:
 		pytest -s --verbose -W ignore --log-level=INFO 2>&1)
 
 deploy_model:
-	helm install charts/seldon-model-server --namespace seldon --name seldon-model-server
-	kubectl rollout status -n seldon deploy/seldon-model-server-default-cbb4caa
+	kubectl apply -f charts/SeldonDeployment-news-classifier.json -n seldon 
+	kubectl rollout status -n seldon deployment/news-classifier-default-cbb4caa
 
 delete_model:
-	helm delete seldon-model-server
-	helm del --purge seldon-model-server || echo "Model deleted"
+	kubectl delete sdep news-classifier
 
 install_helm:
 	kubectl -n kube-system create sa tiller
