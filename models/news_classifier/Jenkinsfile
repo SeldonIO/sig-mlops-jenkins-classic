@@ -47,8 +47,6 @@ volumes: [
   emptyDirVolume(mountPath: '/var/lib/docker'),
 ]) {
   node(label) {
-    customWorkspace 'models/news_classifier'
-
     def myRepo = checkout scm
     def gitCommit = myRepo.GIT_COMMIT
     def gitBranch = myRepo.GIT_BRANCH
