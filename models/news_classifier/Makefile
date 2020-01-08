@@ -1,5 +1,3 @@
-VERSION := $(shell cat VERSION)
-
 readme:
 	jupyter nbconvert README.ipynb --to markdown
 
@@ -35,11 +33,24 @@ install_helm:
 	kubectl rollout status deploy/tiller-deploy -n kube-system
 
 install_ambassador:
-	helm install stable/ambassador -f integration/ambassador_values.yaml --name ambassador --set crds.keep=false --namespace seldon --set replicaCount=1
-	kubectl rollout status deployment.apps/ambassador --namespace seldon
+	helm install stable/ambassador \
+		-f integration/ambassador_values.yaml \
+		--name ambassador \
+		--set crds.keep=false \
+		--namespace seldon \
+		--set replicaCount=1
+	kubectl rollout status deployment.apps/ambassador \
+		--namespace seldon
 
 install_seldon:
-	helm install seldon-core-operator --name seldon-core-operator --repo https://storage.googleapis.com/seldon-charts --namespace seldon
+	# We install SC v0.5.1 because there is a bug in v1.0.0
+	# which breaks the install with Helm v2.x.
+	# https://github.com/SeldonIO/seldon-core/issues/1299
+	helm install seldon-core-operator \
+		--name seldon-core-operator \
+		--repo https://storage.googleapis.com/seldon-charts \
+		--namespace seldon \
+		--version 0.5.1
 	kubectl rollout status -n seldon deployment/seldon-controller-manager
 
 create_namespaces:
