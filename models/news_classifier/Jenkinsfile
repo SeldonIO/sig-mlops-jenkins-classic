@@ -46,8 +46,7 @@ volumes: [
   hostPathVolume(mountPath: '/lib/modules', hostPath: '/lib/modules'),
   emptyDirVolume(mountPath: '/var/lib/docker'),
 ]) {
-  node {
-    label label
+  node(label) {
     customWorkspace 'models/news_classifier'
 
     def myRepo = checkout scm
@@ -56,27 +55,29 @@ volumes: [
     def shortGitCommit = "${gitCommit[0..10]}"
     def previousGitCommit = sh(script: "git rev-parse ${gitCommit}~", returnStdout: true)
  
-    stage('Test') {
-      container('news-classifier-builder') {
-        sh 'pwd'
-        sh "make install_dev test"
+    ws('models/news_classifier') {
+      stage('Test') {
+        container('news-classifier-builder') {
+          sh 'pwd'
+          sh "make install_dev test"
+        }
       }
-    }
 
-    stage('Test integration') {
-      container('news-classifier-builder') {
-        sh 'integration/kind_test_all.sh'
+      stage('Test integration') {
+        container('news-classifier-builder') {
+          sh 'integration/kind_test_all.sh'
+        }
       }
-    }
 
-    stage('Promote application') {
-      container('news-classifier-builder') {
-        withCredentials([[$class: 'UsernamePasswordMultiBinding',
-              credentialsId: 'github-access',
-              usernameVariable: 'GIT_USERNAME',
-              passwordVariable: 'GIT_PASSWORD']]) {
+      stage('Promote application') {
+        container('news-classifier-builder') {
+          withCredentials([[$class: 'UsernamePasswordMultiBinding',
+                credentialsId: 'github-access',
+                usernameVariable: 'GIT_USERNAME',
+                passwordVariable: 'GIT_PASSWORD']]) {
 
-          sh 'promote_application.sh'
+            sh 'promote_application.sh'
+          }
         }
       }
     }
