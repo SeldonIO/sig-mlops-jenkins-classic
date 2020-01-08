@@ -5,7 +5,7 @@ cd -P -- "$(dirname -- "$0")"
 # SO WE CAN MOVE RELATIVE TO THE ACTUAL BASE DIR
 
 export GITOPS_REPO="seldon-gitops"
-export GITOPS_ORG="adriangonz"
+export GITOPS_ORG="SeldonIO"
 export STAGING_FOLDER="staging"
 export PROD_FOLDER="production"
 
