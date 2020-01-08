@@ -52,23 +52,19 @@ volumes: [
     def gitBranch = myRepo.GIT_BRANCH
     def shortGitCommit = "${gitCommit[0..10]}"
     def previousGitCommit = sh(script: "git rev-parse ${gitCommit}~", returnStdout: true)
+    def customWorkspace = "models/news_classifier"
  
     stage('Test') {
       container('news-classifier-builder') {
-        sh """
-          pwd
-          make -C models/news_classifier \
-            install_dev \
-            test 
-          """
+        sh "make install_dev test"
       }
     }
 
-    /* stage('Test integration') { */
-      /* container('news-classifier-builder') { */
-        /* sh 'models/news_classifier/integration/kind_test_all.sh' */
-      /* } */
-    /* } */
+    stage('Test integration') {
+      container('news-classifier-builder') {
+        sh 'integration/kind_test_all.sh'
+      }
+    }
 
     stage('Promote application') {
       container('news-classifier-builder') {
@@ -77,7 +73,7 @@ volumes: [
               usernameVariable: 'GIT_USERNAME',
               passwordVariable: 'GIT_PASSWORD']]) {
 
-          sh 'models/news_classifier/promote_application.sh'
+          sh 'promote_application.sh'
         }
       }
     }
