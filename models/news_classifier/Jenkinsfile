@@ -47,7 +47,7 @@ volumes: [
   emptyDirVolume(mountPath: '/var/lib/docker'),
 ]) {
   node {
-    label $label
+    label label
     customWorkspace 'models/news_classifier'
 
     def myRepo = checkout scm
