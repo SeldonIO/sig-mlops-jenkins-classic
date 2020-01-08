@@ -56,8 +56,8 @@ volumes: [
     ws('./models/news_classifier') {
       stage('Test') {
         container('news-classifier-builder') {
-          sh 'pwd' # debug
-          sh 'ls' # debug
+          sh 'pwd'
+          sh 'ls'
           sh "make install_dev test"
         }
       }
