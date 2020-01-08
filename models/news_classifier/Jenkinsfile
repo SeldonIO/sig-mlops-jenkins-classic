@@ -46,16 +46,16 @@ volumes: [
   hostPathVolume(mountPath: '/lib/modules', hostPath: '/lib/modules'),
   emptyDirVolume(mountPath: '/var/lib/docker'),
 ]) {
-  node(label) {
+  node(label, customWorkspace: 'models/news_classifier') {
     def myRepo = checkout scm
     def gitCommit = myRepo.GIT_COMMIT
     def gitBranch = myRepo.GIT_BRANCH
     def shortGitCommit = "${gitCommit[0..10]}"
     def previousGitCommit = sh(script: "git rev-parse ${gitCommit}~", returnStdout: true)
-    def customWorkspace = "models/news_classifier"
  
     stage('Test') {
       container('news-classifier-builder') {
+        sh 'pwd'
         sh "make install_dev test"
       }
     }
