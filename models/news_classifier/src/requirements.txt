@@ -15,4 +15,4 @@ joblib==0.13.2
 # For tensorflow, any models supported by tensorflow serving (less than v2.0)
 
 # For testing
-pytest==5.1.1
+pytest==5.3.1
