@@ -26,16 +26,15 @@ deploy_model:
 delete_model:
 	kubectl delete sdep news-classifier
 
-install_helm:
-	kubectl -n kube-system create sa tiller
-	kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
-	helm init --service-account tiller
-	kubectl rollout status deploy/tiller-deploy -n kube-system
+helm_setup:
+	helm repo add stable https://kubernetes-charts.storage.googleapis.com/
+	helm repo add seldonio https://storage.googleapis.com/seldon-charts/
+	helm repo update
 
 install_ambassador:
-	helm install stable/ambassador \
+	helm install ambassador \
+		stable/ambassador \
 		-f integration/ambassador_values.yaml \
-		--name ambassador \
 		--set crds.keep=false \
 		--namespace seldon \
 		--set replicaCount=1
@@ -47,8 +46,7 @@ install_seldon:
 	# which breaks the install with Helm v2.x.
 	# https://github.com/SeldonIO/seldon-core/issues/1299
 	helm install seldon-core-operator \
-		--name seldon-core-operator \
-		--repo https://storage.googleapis.com/seldon-charts \
+		seldonio/seldon-core-operator \
 		--namespace seldon \
 		--version 0.5.1
 	kubectl rollout status -n seldon deployment/seldon-controller-manager
@@ -57,7 +55,7 @@ create_namespaces:
 	kubectl create namespace seldon || echo "Namespace seldon already exists"
 	kubectl config set-context $$(kubectl config current-context) --namespace=seldon
 
-kind_setup: install_helm install_ambassador install_seldon create_namespaces deploy_model
+kind_setup: helm_setup install_ambassador install_seldon create_namespaces deploy_model
 
 kind_create_cluster:
 	kind create cluster --config integration/kind_config.yaml

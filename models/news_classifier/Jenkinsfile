@@ -7,7 +7,7 @@ podTemplate(label: label,
   containers: [
   containerTemplate(
       name: 'news-classifier-builder', 
-      image: 'seldonio/core-builder:0.4', 
+      image: 'seldonio/core-builder:0.8', 
       command: 'cat', 
       ttyEnabled: true,
       privileged: true,
