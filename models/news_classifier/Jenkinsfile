@@ -53,7 +53,7 @@ volumes: [
     def shortGitCommit = "${gitCommit[0..10]}"
     def previousGitCommit = sh(script: "git rev-parse ${gitCommit}~", returnStdout: true)
  
-    ws('./models/news_classifier') {
+    ws('${workspace}/models/news_classifier') {
       stage('Test') {
         container('news-classifier-builder') {
           sh 'pwd'
