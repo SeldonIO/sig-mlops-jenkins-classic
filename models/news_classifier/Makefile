@@ -55,7 +55,7 @@ create_namespaces:
 	kubectl create namespace seldon || echo "Namespace seldon already exists"
 	kubectl config set-context $$(kubectl config current-context) --namespace=seldon
 
-kind_setup: helm_setup install_ambassador install_seldon create_namespaces deploy_model
+kind_setup: helm_setup create_namespaces install_ambassador install_seldon deploy_model
 
 kind_create_cluster:
 	kind create cluster --config integration/kind_config.yaml
