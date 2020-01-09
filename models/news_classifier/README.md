@@ -197,7 +197,8 @@ Now we want to be able to deploy the model we just trained. This will just be as
 
 ### Save the trained model
 
-First we have to save the trained model in the `src/` folder, which our wrapper will load
+First we have to save the trained model in the `src/` folder.
+This is the binary that we will upload to our cloud storage (which acts as model registry) and which our wrapper will load.
 
 
 ```python
@@ -335,54 +336,11 @@ Now that we've deployed our MLOps repo, Argo CD will sync the model implementati
 kubectl get pods -n staging
 ```
 
-    The connection to the server 127.0.0.1:39517 was refused - did you specify the right host or port?
-
-
-
-    ---------------------------------------------------------------------------
-
-    CalledProcessError                        Traceback (most recent call last)
-
-    <ipython-input-7-1e3acf7f2973> in <module>
-    ----> 1 get_ipython().run_cell_magic('bash', '', 'kubectl get pods -n staging\n')
-    
-
-    ~/.virtualenvs/sig-mlops/lib/python3.6/site-packages/IPython/core/interactiveshell.py in run_cell_magic(self, magic_name, line, cell)
-       2350             with self.builtin_trap:
-       2351                 args = (magic_arg_s, cell)
-    -> 2352                 result = fn(*args, **kwargs)
-       2353             return result
-       2354 
-
-
-    ~/.virtualenvs/sig-mlops/lib/python3.6/site-packages/IPython/core/magics/script.py in named_script_magic(line, cell)
-        140             else:
-        141                 line = script
-    --> 142             return self.shebang(line, cell)
-        143 
-        144         # write a basic docstring:
-
-
-    </home/agm/.virtualenvs/sig-mlops/lib/python3.6/site-packages/decorator.py:decorator-gen-110> in shebang(self, line, cell)
-
-
-    ~/.virtualenvs/sig-mlops/lib/python3.6/site-packages/IPython/core/magic.py in <lambda>(f, *a, **k)
-        185     # but it's overkill for just that one bit of state.
-        186     def magic_deco(arg):
-    --> 187         call = lambda f, *a, **k: f(*a, **k)
-        188 
-        189         if callable(arg):
-
-
-    ~/.virtualenvs/sig-mlops/lib/python3.6/site-packages/IPython/core/magics/script.py in shebang(self, line, cell)
-        243             sys.stderr.flush()
-        244         if args.raise_error and p.returncode!=0:
-    --> 245             raise CalledProcessError(p.returncode, cell, output=out, stderr=err)
-        246 
-        247     def _run_script(self, p, cell, to_close):
-
-
-    CalledProcessError: Command 'b'kubectl get pods -n staging\n'' returned non-zero exit status 1.
+    NAME                                                   READY   STATUS    RESTARTS   AGE
+    default-broker-filter-b487cfff8-tr9sm                  2/2     Running   4          26d
+    default-broker-ingress-7dc67f5f7b-gvxh5                2/2     Running   3          26d
+    seldon-model-server-default-cbb4caa-7d9f5db4b7-kh5ql   3/3     Running   2          3h42m
+    test1-default-98783c9-84d96c8f64-wv9j6                 3/3     Running   0          23h
 
 
 ### Test your application in the staging environment
