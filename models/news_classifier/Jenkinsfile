@@ -54,20 +54,17 @@ volumes: [
     def previousGitCommit = sh(script: "git rev-parse ${gitCommit}~", returnStdout: true)
  
     ws("${workspace}/models/news_classifier") {
-      // Comment these temporarily while we fix the issue with
-      // `promote_application.sh`
+      stage('Test') {
+        container('news-classifier-builder') {
+          sh "make install_dev test"
+        }
+      }
 
-      /* stage('Test') { */
-        /* container('news-classifier-builder') { */
-          /* sh "make install_dev test" */
-        /* } */
-      /* } */
-
-      /* stage('Test integration') { */
-        /* container('news-classifier-builder') { */
-          /* sh 'integration/kind_test_all.sh' */
-        /* } */
-      /* } */
+      stage('Test integration') {
+        container('news-classifier-builder') {
+          sh 'integration/kind_test_all.sh'
+        }
+      }
 
       stage('Promote application') {
         container('news-classifier-builder') {
