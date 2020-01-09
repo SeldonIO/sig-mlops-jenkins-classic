@@ -75,10 +75,7 @@ volumes: [
                 credentialsId: 'github-access',
                 usernameVariable: 'GIT_USERNAME',
                 passwordVariable: 'GIT_PASSWORD']]) {
-
-            sh 'ls'
-            sh 'pwd'
-            sh 'promote_application.sh'
+            sh './promote_application.sh'
           }
         }
       }
