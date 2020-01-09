@@ -42,14 +42,10 @@ install_ambassador:
 		--namespace seldon
 
 install_seldon:
-	# We install SC v0.5.1 because there is a bug in v1.0.0
-	# which breaks the install with Helm v2.x.
-	# https://github.com/SeldonIO/seldon-core/issues/1299
 	helm install seldon-core-operator \
 		seldonio/seldon-core-operator \
 		--namespace seldon \
-		--version 0.5.1
-	kubectl rollout status -n seldon deployment/seldon-controller-manager
+		--version 1.0.0
 
 create_namespaces:
 	kubectl create namespace seldon || echo "Namespace seldon already exists"
