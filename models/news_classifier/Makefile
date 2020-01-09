@@ -1,3 +1,5 @@
+SDEP_NAME=news-classifier
+
 readme:
 	jupyter nbconvert README.ipynb --to markdown
 
@@ -20,12 +22,12 @@ test_integration:
 		pytest -s --verbose -W ignore --log-level=INFO 2>&1)
 
 deploy_model:
-	kubectl apply -f charts/SeldonDeployment-news-classifier.json -n seldon 
+	kubectl apply -f charts/SeldonDeployment-${SDEP_NAME}.json -n seldon
 	sleep 1
-	kubectl rollout status -n seldon deployment/news-classifier-default-cbb4caa
+	kubectl rollout status -n seldon deployment/${SDEP_NAME}-default-cbb4caa
 
 delete_model:
-	kubectl delete sdep news-classifier
+	kubectl delete sdep ${SDEP_NAME}
 
 helm_setup:
 	helm repo add stable https://kubernetes-charts.storage.googleapis.com/
