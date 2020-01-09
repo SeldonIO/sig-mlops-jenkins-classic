@@ -21,6 +21,7 @@ test_integration:
 
 deploy_model:
 	kubectl apply -f charts/SeldonDeployment-news-classifier.json -n seldon 
+	sleep 1
 	kubectl rollout status -n seldon deployment/news-classifier-default-cbb4caa
 
 delete_model:
