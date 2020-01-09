@@ -14,6 +14,8 @@ export GIT_MANAGER="adriangonz"
 
 export UUID=$(cat /proc/sys/kernel/random/uuid)
 
+echo "My Git Username is ${GIT_USERNAME}"
+
 git clone https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/${GITOPS_ORG}/${GITOPS_REPO}
 
 cd ${GITOPS_REPO}
