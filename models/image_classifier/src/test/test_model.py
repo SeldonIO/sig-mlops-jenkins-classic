@@ -1,7 +1,5 @@
 import torch
 
-from src.model import Classifier
-
 
 def test_model(model, data):
     probs = model(data)

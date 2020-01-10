@@ -11,11 +11,7 @@ TEST_DATA_PATH = os.path.join(TEST_PATH, "data")
 @pytest.fixture
 def model():
     model_path = os.path.join(TEST_DATA_PATH, "model.pt")
-    model_state_dict = torch.load(model_path)
-    model = Classifier()
-    model.load_state_dict(model_state_dict)
-
-    return model
+    return torch.load(model_path)
 
 
 @pytest.fixture
