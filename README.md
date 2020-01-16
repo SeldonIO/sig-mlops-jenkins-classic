@@ -109,96 +109,99 @@ The following sections will dive into each of the sections in a much higher deta
 
 ```python
 %%writefile ./models/news_classifier/Jenkinsfile
-//properties([pipelineTriggers([githubPush()])])
+pipeline {
+  agent {
+    kubernetes {
+      defaultContainer 'core-builder'
+      yamlFile 'models/news_classifier/podTemplate.yaml'
+    }
+  }
 
-def label = "worker-${UUID.randomUUID().toString()}"
-
-podTemplate(label: label, 
-  workspaceVolume: dynamicPVC(requestsSize: "4Gi"),
-  containers: [
-  containerTemplate(
-      name: 'news-classifier-builder', 
-      image: 'seldonio/core-builder:0.4', 
-      command: 'cat', 
-      ttyEnabled: true,
-      privileged: true,
-      resourceRequestCpu: '200m',
-      resourceLimitCpu: '500m',
-      resourceRequestMemory: '1500Mi',
-      resourceLimitMemory: '1500Mi',
-  ),
-  containerTemplate(
-      name: 'jnlp', 
-      image: 'jenkins/jnlp-slave:3.35-5-alpine', 
-      args: '${computer.jnlpmac} ${computer.name}')
-],
-yaml:'''
-spec:
-  securityContext:
-    fsGroup: 1000
-  containers:
-  - name: jnlp
-    imagePullPolicy: IfNotPresent
-    resources:
-      limits:
-        ephemeral-storage: "500Mi"
-      requests:
-        ephemeral-storage: "500Mi"
-  - name: news-classifier-builder
-    imagePullPolicy: IfNotPresent
-    resources:
-      limits:
-        ephemeral-storage: "15Gi"
-      requests:
-        ephemeral-storage: "15Gi"
-''',
-volumes: [
-  hostPathVolume(mountPath: '/sys/fs/cgroup', hostPath: '/sys/fs/cgroup'),
-  hostPathVolume(mountPath: '/lib/modules', hostPath: '/lib/modules'),
-  emptyDirVolume(mountPath: '/var/lib/docker'),
-]) {
-  node(label) {
-    def myRepo = checkout scm
-    def gitCommit = myRepo.GIT_COMMIT
-    def gitBranch = myRepo.GIT_BRANCH
-    def shortGitCommit = "${gitCommit[0..10]}"
-    def previousGitCommit = sh(script: "git rev-parse ${gitCommit}~", returnStdout: true)
- 
+  stages {
     stage('Test') {
-      container('news-classifier-builder') {
-        sh """
-          pwd
-          make -C models/news_classifier \
-            install_dev \
-            test 
-          """
+      steps {
+        sh '''
+          cd models/news_classifier
+          make install_dev test
+        '''
       }
     }
 
-    /* stage('Test integration') { */
-      /* container('news-classifier-builder') { */
-        /* sh 'models/news_classifier/integration/kind_test_all.sh' */
-      /* } */
-    /* } */
+    stage('Test integration') {
+      steps {
+        sh '''
+          cd models/news_classifier
+          ./integration/kind_test_all.sh
+        '''
+      }
+    }
 
     stage('Promote application') {
-      container('news-classifier-builder') {
+      steps {
         withCredentials([[$class: 'UsernamePasswordMultiBinding',
               credentialsId: 'github-access',
               usernameVariable: 'GIT_USERNAME',
               passwordVariable: 'GIT_PASSWORD']]) {
-
-          sh 'models/news_classifier/promote_application.sh'
+          sh '''
+            cd models/news_classifier
+            ./promote_application.sh
+          '''
         }
       }
     }
+
   }
 }
-
 
 ```
 
     Overwriting ./models/news_classifier/Jenkinsfile
+
+
+
+```python
+%%writefile ./models/news_classifier/podTemplate.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod
+spec:
+  containers:
+  - name: core-builder
+    image: seldonio/core-builder:0.8
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1500Mi
+        ephemeral-storage: "15Gi"
+      requests:
+        cpu: 200m
+        memory: 1500Mi
+        ephemeral-storage: "15Gi"
+    securityContext:
+      privileged: true
+    tty: true
+    volumeMounts:
+      - mountPath: /lib/modules
+        name: modules
+        readOnly: true
+      - mountPath: /sys/fs/cgroup
+        name: cgroup
+      - mountPath: /var/lib/docker
+        name: dind-storage
+  volumes:
+  - name: modules
+    hostPath:
+      path: /lib/modules
+  - name: cgroup
+    hostPath:
+      path: /sys/fs/cgroup
+  - name: dind-storage
+    emptyDir: {}
+
+```
+
+    Overwriting ./models/news_classifier/podTemplate.yaml
 
 
 ## Replicable test and build environment
@@ -231,11 +234,14 @@ We can leverage Jenkins Pipelines to manage the different stages of our CI/CD pi
 In particular, to add an integration stage, we can use the `stage()` object:
 
 ```groovy
-stage('Test integration') {
-  container('news-classifier-builder') {
-    sh 'models/news_classifier/integration/kind_test_all.sh'
-  }
-}
+    stage('Test integration') {
+      steps {
+        sh '''
+          cd models/news_classifier
+          ./integration/kind_test_all.sh
+        '''
+      }
+    }
 ```
 
 ### Enable Docker
@@ -244,38 +250,38 @@ To test our models, we will need to build their respective containers, for which
 
 In order to do so, we will first need to mount a few volumes into the CI/CD container.
 These basically consist of the core components that docker will need to be able to run.
-To mount them we will leverage the `volumes` argument of the `podTemplate()` object:
+To mount them we will add these entries into the `podTemplate.yaml` file.
 
-```groovy
-podTemplate(...,
-    volumes: [
-      hostPathVolume(mountPath: '/sys/fs/cgroup', hostPath: '/sys/fs/cgroup'),
-      hostPathVolume(mountPath: '/lib/modules', hostPath: '/lib/modules'),
-      emptyDirVolume(mountPath: '/var/lib/docker'),
-    ])
-```
-
-We then need to make sure that the pod can run with privileged context.
-This step is required in order to be able to run the `docker` daemon.
-To enable privileged permissions we will leverage the `privileged` flag of the `containerTemplate()` object and the `yaml` parameter of `podTemplate()`:
+Please also note that we set container to run in `privileged` mode.
 
 
-```groovy
-podTemplate(...,
-    containers: [
-      containerTemplate(
-          ...,
-          privileged: true,
-          ...
-      ),
-      ...],
-    yaml:'''
-    spec:
-      securityContext:
-        fsGroup: 1000
-      ...
-    ''',
-....)
+```yaml
+ApiVersion: v1
+...
+spec:
+  containers:
+  - name: core-builder
+    ...
+    securityContext:
+      privileged: true
+    ...
+    volumeMounts:
+      - mountPath: /lib/modules
+        name: modules
+        readOnly: true
+      - mountPath: /sys/fs/cgroup
+        name: cgroup
+      - mountPath: /var/lib/docker
+        name: dind-storage
+  volumes:
+  - name: modules
+    hostPath:
+      path: /lib/modules
+  - name: cgroup
+    hostPath:
+      path: /sys/fs/cgroup
+  - name: dind-storage
+    emptyDir: {}
 ```
 
 ### Run tests in Kind 
