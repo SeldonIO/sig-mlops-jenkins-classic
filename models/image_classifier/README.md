@@ -13,33 +13,35 @@ We will need the following dependencies in order to run the Python code:
 
 
 ```python
-!pygmentize src/requirements.txt
+%%writefile src/requirements.txt
+torch==1.3.1
+torchvision==0.4.2
+matplotlib==3.1.2
 ```
 
-    torch==1.3.1
-    torchvision==0.4.2
+    Overwriting src/requirements.txt
 
 
 We can now install the dependencies using the make command:
 
 
-```python
-!make install_dev
+```bash
+%%bash
+make install_dev
 ```
 
-    cat: VERSION: No such file or directory
-    Makefile:10: warning: overriding recipe for target 'make'
-    Makefile:7: warning: ignoring old recipe for target 'make'
-    Makefile:14: warning: overriding recipe for target 'make'
-    Makefile:10: warning: ignoring old recipe for target 'make'
     pip install -r src/requirements.txt
-    Requirement already satisfied: torch==1.3.1 in /home/agm/.pyenv/versions/3.6.9/lib/python3.6/site-packages (from -r src/requirements.txt (line 1)) (1.3.1)
-    Requirement already satisfied: torchvision==0.4.2 in /home/agm/.pyenv/versions/3.6.9/lib/python3.6/site-packages (from -r src/requirements.txt (line 2)) (0.4.2)
-    Requirement already satisfied: numpy in /home/agm/.pyenv/versions/3.6.9/lib/python3.6/site-packages (from torch==1.3.1->-r src/requirements.txt (line 1)) (1.17.4)
-    Requirement already satisfied: pillow>=4.1.1 in /home/agm/.pyenv/versions/3.6.9/lib/python3.6/site-packages (from torchvision==0.4.2->-r src/requirements.txt (line 2)) (6.2.1)
-    Requirement already satisfied: six in /home/agm/.pyenv/versions/3.6.9/lib/python3.6/site-packages (from torchvision==0.4.2->-r src/requirements.txt (line 2)) (1.12.0)
-    [33mWARNING: You are using pip version 19.2.3, however version 19.3.1 is available.
-    You should consider upgrading via the 'pip install --upgrade pip' command.[0m
+    Requirement already satisfied: torch==1.3.1 in /home/agm/.virtualenvs/sig-mlops/lib/python3.6/site-packages (from -r src/requirements.txt (line 1)) (1.3.1)
+    Requirement already satisfied: torchvision==0.4.2 in /home/agm/.virtualenvs/sig-mlops/lib/python3.6/site-packages (from -r src/requirements.txt (line 2)) (0.4.2)
+    Requirement already satisfied: matplotlib==3.1.2 in /home/agm/.virtualenvs/sig-mlops/lib/python3.6/site-packages (from -r src/requirements.txt (line 3)) (3.1.2)
+    Requirement already satisfied: numpy in /home/agm/.virtualenvs/sig-mlops/lib/python3.6/site-packages (from torch==1.3.1->-r src/requirements.txt (line 1)) (1.17.4)
+    Requirement already satisfied: six in /home/agm/.virtualenvs/sig-mlops/lib/python3.6/site-packages (from torchvision==0.4.2->-r src/requirements.txt (line 2)) (1.13.0)
+    Requirement already satisfied: pillow>=4.1.1 in /home/agm/.virtualenvs/sig-mlops/lib/python3.6/site-packages (from torchvision==0.4.2->-r src/requirements.txt (line 2)) (6.2.1)
+    Requirement already satisfied: pyparsing!=2.0.4,!=2.1.2,!=2.1.6,>=2.0.1 in /home/agm/.virtualenvs/sig-mlops/lib/python3.6/site-packages (from matplotlib==3.1.2->-r src/requirements.txt (line 3)) (2.4.5)
+    Requirement already satisfied: cycler>=0.10 in /home/agm/.virtualenvs/sig-mlops/lib/python3.6/site-packages (from matplotlib==3.1.2->-r src/requirements.txt (line 3)) (0.10.0)
+    Requirement already satisfied: kiwisolver>=1.0.1 in /home/agm/.virtualenvs/sig-mlops/lib/python3.6/site-packages (from matplotlib==3.1.2->-r src/requirements.txt (line 3)) (1.1.0)
+    Requirement already satisfied: python-dateutil>=2.1 in /home/agm/.virtualenvs/sig-mlops/lib/python3.6/site-packages (from matplotlib==3.1.2->-r src/requirements.txt (line 3)) (2.8.1)
+    Requirement already satisfied: setuptools in /home/agm/.virtualenvs/sig-mlops/lib/python3.6/site-packages (from kiwisolver>=1.0.1->matplotlib==3.1.2->-r src/requirements.txt (line 3)) (42.0.1)
 
 
 ### Download the ML data
@@ -69,7 +71,7 @@ plt.imshow(x_example.squeeze())
 
 
 
-    <matplotlib.image.AxesImage at 0x7f1d7a519940>
+    <matplotlib.image.AxesImage at 0x7faf16f31e80>
 
 
 
@@ -113,59 +115,59 @@ for epoch in range(1, epochs + 1):
     scheduler.step()
 ```
 
-    Train Epoch: 1 [0/60000 (0%)]	Loss: 2.314072
-    Train Epoch: 1 [2560/60000 (4%)]	Loss: 1.937630
-    Train Epoch: 1 [5120/60000 (9%)]	Loss: 0.461113
-    Train Epoch: 1 [7680/60000 (13%)]	Loss: 0.303022
-    Train Epoch: 1 [10240/60000 (17%)]	Loss: 0.384866
-    Train Epoch: 1 [12800/60000 (21%)]	Loss: 0.315486
-    Train Epoch: 1 [15360/60000 (26%)]	Loss: 0.242260
-    Train Epoch: 1 [17920/60000 (30%)]	Loss: 0.274990
-    Train Epoch: 1 [20480/60000 (34%)]	Loss: 0.193279
-    Train Epoch: 1 [23040/60000 (38%)]	Loss: 0.168615
-    Train Epoch: 1 [25600/60000 (43%)]	Loss: 0.174742
-    Train Epoch: 1 [28160/60000 (47%)]	Loss: 0.344227
-    Train Epoch: 1 [30720/60000 (51%)]	Loss: 0.236581
-    Train Epoch: 1 [33280/60000 (55%)]	Loss: 0.150894
-    Train Epoch: 1 [35840/60000 (60%)]	Loss: 0.163011
-    Train Epoch: 1 [38400/60000 (64%)]	Loss: 0.145040
-    Train Epoch: 1 [40960/60000 (68%)]	Loss: 0.173859
-    Train Epoch: 1 [43520/60000 (72%)]	Loss: 0.135148
-    Train Epoch: 1 [46080/60000 (77%)]	Loss: 0.095240
-    Train Epoch: 1 [48640/60000 (81%)]	Loss: 0.175763
-    Train Epoch: 1 [51200/60000 (85%)]	Loss: 0.129632
-    Train Epoch: 1 [53760/60000 (89%)]	Loss: 0.115358
-    Train Epoch: 1 [56320/60000 (94%)]	Loss: 0.128080
-    Train Epoch: 1 [58880/60000 (98%)]	Loss: 0.129241
+    Train Epoch: 1 [0/60000 (0%)]	Loss: 2.308114
+    Train Epoch: 1 [2560/60000 (4%)]	Loss: 1.369711
+    Train Epoch: 1 [5120/60000 (9%)]	Loss: 0.638653
+    Train Epoch: 1 [7680/60000 (13%)]	Loss: 0.428343
+    Train Epoch: 1 [10240/60000 (17%)]	Loss: 0.357857
+    Train Epoch: 1 [12800/60000 (21%)]	Loss: 0.446279
+    Train Epoch: 1 [15360/60000 (26%)]	Loss: 0.319209
+    Train Epoch: 1 [17920/60000 (30%)]	Loss: 0.221589
+    Train Epoch: 1 [20480/60000 (34%)]	Loss: 0.280998
+    Train Epoch: 1 [23040/60000 (38%)]	Loss: 0.170742
+    Train Epoch: 1 [25600/60000 (43%)]	Loss: 0.218999
+    Train Epoch: 1 [28160/60000 (47%)]	Loss: 0.206189
+    Train Epoch: 1 [30720/60000 (51%)]	Loss: 0.111903
+    Train Epoch: 1 [33280/60000 (55%)]	Loss: 0.242586
+    Train Epoch: 1 [35840/60000 (60%)]	Loss: 0.206079
+    Train Epoch: 1 [38400/60000 (64%)]	Loss: 0.210710
+    Train Epoch: 1 [40960/60000 (68%)]	Loss: 0.171747
+    Train Epoch: 1 [43520/60000 (72%)]	Loss: 0.247889
+    Train Epoch: 1 [46080/60000 (77%)]	Loss: 0.060543
+    Train Epoch: 1 [48640/60000 (81%)]	Loss: 0.144133
+    Train Epoch: 1 [51200/60000 (85%)]	Loss: 0.128856
+    Train Epoch: 1 [53760/60000 (89%)]	Loss: 0.078763
+    Train Epoch: 1 [56320/60000 (94%)]	Loss: 0.130446
+    Train Epoch: 1 [58880/60000 (98%)]	Loss: 0.101130
     
-    Test set: Average loss: 0.0695, Accuracy: 9763/10000 (98%)
+    Test set: Average loss: 0.0656, Accuracy: 9772/10000 (98%)
     
-    Train Epoch: 2 [0/60000 (0%)]	Loss: 0.150772
-    Train Epoch: 2 [2560/60000 (4%)]	Loss: 0.095167
-    Train Epoch: 2 [5120/60000 (9%)]	Loss: 0.115704
-    Train Epoch: 2 [7680/60000 (13%)]	Loss: 0.120062
-    Train Epoch: 2 [10240/60000 (17%)]	Loss: 0.074608
-    Train Epoch: 2 [12800/60000 (21%)]	Loss: 0.084472
-    Train Epoch: 2 [15360/60000 (26%)]	Loss: 0.131837
-    Train Epoch: 2 [17920/60000 (30%)]	Loss: 0.031366
-    Train Epoch: 2 [20480/60000 (34%)]	Loss: 0.027841
-    Train Epoch: 2 [23040/60000 (38%)]	Loss: 0.065945
-    Train Epoch: 2 [25600/60000 (43%)]	Loss: 0.040186
-    Train Epoch: 2 [28160/60000 (47%)]	Loss: 0.104263
-    Train Epoch: 2 [30720/60000 (51%)]	Loss: 0.112271
-    Train Epoch: 2 [33280/60000 (55%)]	Loss: 0.124679
-    Train Epoch: 2 [35840/60000 (60%)]	Loss: 0.165172
-    Train Epoch: 2 [38400/60000 (64%)]	Loss: 0.053470
-    Train Epoch: 2 [40960/60000 (68%)]	Loss: 0.053918
-    Train Epoch: 2 [43520/60000 (72%)]	Loss: 0.104043
-    Train Epoch: 2 [46080/60000 (77%)]	Loss: 0.078170
-    Train Epoch: 2 [48640/60000 (81%)]	Loss: 0.056356
-    Train Epoch: 2 [51200/60000 (85%)]	Loss: 0.103222
-    Train Epoch: 2 [53760/60000 (89%)]	Loss: 0.081285
-    Train Epoch: 2 [56320/60000 (94%)]	Loss: 0.120430
-    Train Epoch: 2 [58880/60000 (98%)]	Loss: 0.130934
+    Train Epoch: 2 [0/60000 (0%)]	Loss: 0.041494
+    Train Epoch: 2 [2560/60000 (4%)]	Loss: 0.094879
+    Train Epoch: 2 [5120/60000 (9%)]	Loss: 0.068686
+    Train Epoch: 2 [7680/60000 (13%)]	Loss: 0.120580
+    Train Epoch: 2 [10240/60000 (17%)]	Loss: 0.082097
+    Train Epoch: 2 [12800/60000 (21%)]	Loss: 0.054558
+    Train Epoch: 2 [15360/60000 (26%)]	Loss: 0.065923
+    Train Epoch: 2 [17920/60000 (30%)]	Loss: 0.243822
+    Train Epoch: 2 [20480/60000 (34%)]	Loss: 0.099501
+    Train Epoch: 2 [23040/60000 (38%)]	Loss: 0.107730
+    Train Epoch: 2 [25600/60000 (43%)]	Loss: 0.052492
+    Train Epoch: 2 [28160/60000 (47%)]	Loss: 0.074916
+    Train Epoch: 2 [30720/60000 (51%)]	Loss: 0.087789
+    Train Epoch: 2 [33280/60000 (55%)]	Loss: 0.107939
+    Train Epoch: 2 [35840/60000 (60%)]	Loss: 0.062355
+    Train Epoch: 2 [38400/60000 (64%)]	Loss: 0.100331
+    Train Epoch: 2 [40960/60000 (68%)]	Loss: 0.126194
+    Train Epoch: 2 [43520/60000 (72%)]	Loss: 0.091540
+    Train Epoch: 2 [46080/60000 (77%)]	Loss: 0.102458
+    Train Epoch: 2 [48640/60000 (81%)]	Loss: 0.063010
+    Train Epoch: 2 [51200/60000 (85%)]	Loss: 0.063841
+    Train Epoch: 2 [53760/60000 (89%)]	Loss: 0.054854
+    Train Epoch: 2 [56320/60000 (94%)]	Loss: 0.157604
+    Train Epoch: 2 [58880/60000 (98%)]	Loss: 0.104388
     
-    Test set: Average loss: 0.0570, Accuracy: 9825/10000 (98%)
+    Test set: Average loss: 0.0470, Accuracy: 9846/10000 (98%)
     
 
 
@@ -196,7 +198,7 @@ test_epoch(model, test_loader)
 ```
 
     
-    Test set: Average loss: 0.0570, Accuracy: 9825/10000 (98%)
+    Test set: Average loss: 0.0470, Accuracy: 9846/10000 (98%)
     
 
 
@@ -206,45 +208,16 @@ Now we want to be able to deploy the model we just trained. This will just be as
 
 ### Save the trained model
 
-First we have to save the trained model in the `src/` folder, which our wrapper will load
+First we have to save the trained model in the `src/` folder.
+This is the artifact we will upload to our model registry and which the wrapper will load.
 
 
 ```python
 import os
 
-model_path = os.path.join("models", "model.pt")
+model_path = os.path.join("src", "model.pt")
 torch.save(model.state_dict(), model_path)
 ```
-
-
-    ---------------------------------------------------------------------------
-
-    FileNotFoundError                         Traceback (most recent call last)
-
-    <ipython-input-46-7c8efb7d3ee4> in <module>
-          2 
-          3 model_path = os.path.join("models", "model.pt")
-    ----> 4 torch.save(model.state_dict(), model_path)
-    
-
-    ~/.virtualenvs/sig-mlops/lib/python3.6/site-packages/torch/serialization.py in save(obj, f, pickle_module, pickle_protocol)
-        258         >>> torch.save(x, buffer)
-        259     """
-    --> 260     return _with_file_like(f, "wb", lambda f: _save(obj, f, pickle_module, pickle_protocol))
-        261 
-        262 
-
-
-    ~/.virtualenvs/sig-mlops/lib/python3.6/site-packages/torch/serialization.py in _with_file_like(f, mode, body)
-        181             (sys.version_info[0] == 3 and isinstance(f, pathlib.Path)):
-        182         new_fd = True
-    --> 183         f = open(f, mode)
-        184     try:
-        185         return body(f)
-
-
-    FileNotFoundError: [Errno 2] No such file or directory: 'models/model.pt'
-
 
 ### Update your unit test
 
@@ -252,45 +225,157 @@ We'll write a very simple unit test that make sure that the model loads and runs
 
 
 ```python
-!pygmentize src/test_model.py
+%%writefile ./src/test_model.py
+from src.model import Classifier
+
+def test_model():
+    data = ["text 1", "text 2"]
+
+    model = Classifier()
+    model_path = "model.pt"
+    model_state_dict = torch.load(model_path)
+    model.load_state_dict(model_state_dict)
+    y_pred = model(x_example.unsqueeze(0))
+
+    assert all(y_pred == 5)
 ```
 
-    [34mimport[39;49;00m [04m[36mnumpy[39;49;00m [34mas[39;49;00m [04m[36mnp[39;49;00m
-    [34mfrom[39;49;00m [04m[36munittest[39;49;00m [34mimport[39;49;00m mock
-    [34mimport[39;49;00m [04m[36mjoblib[39;49;00m
-    [34mimport[39;49;00m [04m[36mos[39;49;00m
-    
-    EXPECTED_RESPONSE = np.array([[34m3[39;49;00m, [34m3[39;49;00m])
-    
-    [34mdef[39;49;00m [32mtest_model[39;49;00m(*args, **kwargs):
-        data = [[33m"[39;49;00m[33mtext 1[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mtext 2[39;49;00m[33m"[39;49;00m]
-    
-        m = joblib.load([33m"[39;49;00m[33mmodel.joblib[39;49;00m[33m"[39;49;00m)
-        result = m.predict(data)
-        [34massert[39;49;00m [36mall[39;49;00m(result == EXPECTED_RESPONSE)
+    Writing ./src/test_model.py
 
 
 
 ```python
-!make test
+restored_model.forward()
 ```
 
-    cat: VERSION: No such file or directory
-    Makefile:10: warning: overriding recipe for target 'make'
-    Makefile:7: warning: ignoring old recipe for target 'make'
-    Makefile:14: warning: overriding recipe for target 'make'
-    Makefile:10: warning: ignoring old recipe for target 'make'
-    (cd src && \
-    	pytest -s --verbose -W ignore --log-level=INFO 2>&1)
-    [1m============================= test session starts ==============================[0m
-    platform linux -- Python 3.6.9, pytest-5.1.1, py-1.8.0, pluggy-0.13.1 -- /home/agm/.pyenv/versions/3.6.9/bin/python3.6
+
+
+
+    <bound method Classifier.forward of Classifier(
+      (conv1): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1))
+      (conv2): Conv2d(32, 64, kernel_size=(3, 3), stride=(1, 1))
+      (dropout1): Dropout2d(p=0.25, inplace=False)
+      (dropout2): Dropout2d(p=0.5, inplace=False)
+      (fc1): Linear(in_features=9216, out_features=128, bias=True)
+      (fc2): Linear(in_features=128, out_features=10, bias=True)
+    )>
+
+
+
+
+```bash
+%%bash
+make test
+```
+
+    cd src && \
+    	pytest -s --verbose -W ignore --log-level=INFO 2>&1
+    ============================= test session starts ==============================
+    platform linux -- Python 3.6.9, pytest-5.1.1, py-1.8.0, pluggy-0.13.1 -- /home/agm/.virtualenvs/sig-mlops/bin/python3.6
     cachedir: .pytest_cache
-    rootdir: /home/agm/Seldon/sig-mlops-jenkins-classic/models/news_classifier/src
-    collected 1 item                                                               [0m
+    rootdir: /home/agm/Seldon/sig-mlops-jenkins-classic/models/image_classifier/src
+    collecting ... collected 1 item
     
-    test_model.py::test_model [32mPASSED[0m
+    test_model.py::test_model FAILED
     
-    [32m[1m============================== 1 passed in 1.05s ===============================[0m
+    =================================== FAILURES ===================================
+    __________________________________ test_model __________________________________
+    
+        def test_model():
+            data = ["text 1", "text 2"]
+        
+            model = Classifier()
+    >       model.load_state_dict("model.pt")
+    
+    test_model.py:7: 
+    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+    
+    self = Classifier(
+      (conv1): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1))
+      (conv2): Conv2d(32, 64, kernel_size=(3, 3), ...): Linear(in_features=9216, out_features=128, bias=True)
+      (fc2): Linear(in_features=128, out_features=10, bias=True)
+    )
+    state_dict = 'model.pt', strict = True
+    
+        def load_state_dict(self, state_dict, strict=True):
+            r"""Copies parameters and buffers from :attr:`state_dict` into
+            this module and its descendants. If :attr:`strict` is ``True``, then
+            the keys of :attr:`state_dict` must exactly match the keys returned
+            by this module's :meth:`~torch.nn.Module.state_dict` function.
+        
+            Arguments:
+                state_dict (dict): a dict containing parameters and
+                    persistent buffers.
+                strict (bool, optional): whether to strictly enforce that the keys
+                    in :attr:`state_dict` match the keys returned by this module's
+                    :meth:`~torch.nn.Module.state_dict` function. Default: ``True``
+        
+            Returns:
+                ``NamedTuple`` with ``missing_keys`` and ``unexpected_keys`` fields:
+                    * **missing_keys** is a list of str containing the missing keys
+                    * **unexpected_keys** is a list of str containing the unexpected keys
+            """
+            missing_keys = []
+            unexpected_keys = []
+            error_msgs = []
+        
+            # copy state_dict so _load_from_state_dict can modify it
+            metadata = getattr(state_dict, '_metadata', None)
+    >       state_dict = state_dict.copy()
+    E       AttributeError: 'str' object has no attribute 'copy'
+    
+    /home/agm/.virtualenvs/sig-mlops/lib/python3.6/site-packages/torch/nn/modules/module.py:812: AttributeError
+    ============================== 1 failed in 0.75s ===============================
+
+
+    make: *** [Makefile:10: test] Error 1
+
+
+
+    ---------------------------------------------------------------------------
+
+    CalledProcessError                        Traceback (most recent call last)
+
+    <ipython-input-20-d00272f30bcb> in <module>
+    ----> 1 get_ipython().run_cell_magic('bash', '', 'make test\n')
+    
+
+    ~/.virtualenvs/sig-mlops/lib/python3.6/site-packages/IPython/core/interactiveshell.py in run_cell_magic(self, magic_name, line, cell)
+       2350             with self.builtin_trap:
+       2351                 args = (magic_arg_s, cell)
+    -> 2352                 result = fn(*args, **kwargs)
+       2353             return result
+       2354 
+
+
+    ~/.virtualenvs/sig-mlops/lib/python3.6/site-packages/IPython/core/magics/script.py in named_script_magic(line, cell)
+        140             else:
+        141                 line = script
+    --> 142             return self.shebang(line, cell)
+        143 
+        144         # write a basic docstring:
+
+
+    </home/agm/.virtualenvs/sig-mlops/lib/python3.6/site-packages/decorator.py:decorator-gen-110> in shebang(self, line, cell)
+
+
+    ~/.virtualenvs/sig-mlops/lib/python3.6/site-packages/IPython/core/magic.py in <lambda>(f, *a, **k)
+        185     # but it's overkill for just that one bit of state.
+        186     def magic_deco(arg):
+    --> 187         call = lambda f, *a, **k: f(*a, **k)
+        188 
+        189         if callable(arg):
+
+
+    ~/.virtualenvs/sig-mlops/lib/python3.6/site-packages/IPython/core/magics/script.py in shebang(self, line, cell)
+        243             sys.stderr.flush()
+        244         if args.raise_error and p.returncode!=0:
+    --> 245             raise CalledProcessError(p.returncode, cell, output=out, stderr=err)
+        246 
+        247     def _run_script(self, p, cell, to_close):
+
+
+    CalledProcessError: Command 'b'make test\n'' returned non-zero exit status 2.
 
 
 ### Updating Integration Tests
