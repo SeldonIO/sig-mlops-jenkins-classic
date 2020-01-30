@@ -524,11 +524,13 @@ kubectl get svc -n jenkins | grep jenkins
 
 ## Further configuration 
 
-If you wish to set up automated pipeline triggers, you will have to install the "GitHub" plugin (there are quite a few github related ones but the one you want is the one called plainly "GitHub", which then will allow for triggering pipelines automatically on commit
+If you wish to set up automated pipeline triggers, you will have to install the "GitHub" plugin (there are quite a few github related ones but the one you want is the one called plainly "GitHub", which then will allow for triggering pipelines automatically on commit.
 
 - Install the GitHub Plugin [(for automated webhook triggers)](https://support.cloudbees.com/hc/en-us/articles/115003015691-GitHub-Webhook-Non-Multibranch-Jobs).
 - Provide a GitHub token with read access so it can clone relevant repositories.
 - Set-up webhooks so that GitHub can send push requests.
+
+Additionally, you will need to configure your Git's `name` and `email` as part of Jenkins settings.
 
 ### Make sure plugins are updated
 
@@ -537,3 +539,8 @@ If you try to run a pipeline and you get an error such as "No Such DSL Method", 
 Updating your plugins can be done by going to "Manage Jenkins" -> "Plugins", and then selecct all the plugins and click "Update and load after restart". This will take you to another screen - there you should tick the checkbox that reads "restart after plugins are downloaded and installed".
 
 Once you update our plugins you should be ready to go.
+
+
+```python
+
+```
