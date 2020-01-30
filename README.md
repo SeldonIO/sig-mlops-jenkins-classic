@@ -541,8 +541,3 @@ If you try to run a pipeline and you get an error such as "No Such DSL Method", 
 Updating your plugins can be done by going to "Manage Jenkins" -> "Plugins", and then selecct all the plugins and click "Update and load after restart". This will take you to another screen - there you should tick the checkbox that reads "restart after plugins are downloaded and installed".
 
 Once you update our plugins you should be ready to go.
-
-
-```python
-
-```
