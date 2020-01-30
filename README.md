@@ -56,13 +56,15 @@ This may be desired if there are non-standard linux libraries or non-standard de
 
 The state of each of our environments (e.g. production or staging) is stored on a GitOps repository.
 This repository contains all the different Kubernetes resources that have been deployed to each cluster.
-It is linked through ArgoCD to each of our Kubernetes clusters (or namespaces) so that a change in the repository triggers an update of our environment.
+It is linked through [ArgoCD](#ArgoCD) to each of our Kubernetes clusters (or namespaces) so that a change in the repository triggers an update of our environment.
 
 When the deployment configuration of a machine learning model implementation is updated, this will automatically make the changes available through a PR to the respective manager/tech-lead/approver.
 This step will enable the end to end machine learning model promotion to be reviewed and approved by the respective individual.
 
 The manager/tech-lead will have to approve the PR before it can be merged.
 Once it’s approved, it will be merged into the GitOps repo, which will immediately trigger the update in the production namespace/cluster.
+
+You can see an example of a GitOps repository in the [SeldonIO/seldon-gitops](https://github.com/SeldonIO/seldon-gitops) repository.
 
 ### Re-usable model server repository
 
@@ -567,7 +569,7 @@ We will assume that the `GITHUB_ORG` and `REPONAME` environment variables have b
 
 ```bash
 %%bash
-export GITHUB_ORG=johndoe
+export GITHUB_ORG=SeldonIO
 export REPONAME=seldon-gitops
 ```
 
