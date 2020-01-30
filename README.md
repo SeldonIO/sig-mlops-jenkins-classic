@@ -532,6 +532,8 @@ If you wish to set up automated pipeline triggers, you will have to install the 
 
 Additionally, you will need to configure your Git's `name` and `email` as part of Jenkins settings.
 
+![Git user config](./images/git-user.png)
+
 ### Make sure plugins are updated
 
 If you try to run a pipeline and you get an error such as "No Such DSL Method", or any strange Java exception when running a pipeline, the most probably reason is due to current plugins not being up to date. 
