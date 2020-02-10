@@ -56,13 +56,15 @@ This may be desired if there are non-standard linux libraries or non-standard de
 
 The state of each of our environments (e.g. production or staging) is stored on a GitOps repository.
 This repository contains all the different Kubernetes resources that have been deployed to each cluster.
-It is linked through ArgoCD to each of our Kubernetes clusters (or namespaces) so that a change in the repository triggers an update of our environment.
+It is linked through [ArgoCD](#ArgoCD) to each of our Kubernetes clusters (or namespaces) so that a change in the repository triggers an update of our environment.
 
 When the deployment configuration of a machine learning model implementation is updated, this will automatically make the changes available through a PR to the respective manager/tech-lead/approver.
 This step will enable the end to end machine learning model promotion to be reviewed and approved by the respective individual.
 
 The manager/tech-lead will have to approve the PR before it can be merged.
 Once it’s approved, it will be merged into the GitOps repo, which will immediately trigger the update in the production namespace/cluster.
+
+You can see an example of a GitOps repository in the [SeldonIO/seldon-gitops](https://github.com/SeldonIO/seldon-gitops) repository.
 
 ### Re-usable model server repository
 
@@ -537,3 +539,76 @@ If you try to run a pipeline and you get an error such as "No Such DSL Method", 
 Updating your plugins can be done by going to "Manage Jenkins" -> "Plugins", and then selecct all the plugins and click "Update and load after restart". This will take you to another screen - there you should tick the checkbox that reads "restart after plugins are downloaded and installed".
 
 Once you update our plugins you should be ready to go.
+
+# ArgoCD
+
+A key point of this approach to MLOps relies on having a GitOps repository which gets synced with our Kubernetes cluster.
+To achieve this we leverage [ArgoCD](https://argoproj.github.io/argo-cd/), which will take care of setting up webhooks with your GitOps repository so that on every change it triggers a synchronisation between the resources you've pushed and what's deployed on the cluster.
+
+## Installation
+
+If you don't have it already, you can install ArgoCD following the [official documentation](https://argoproj.github.io/argo-cd/getting_started/#1-install-argo-cd):
+
+
+```bash
+%%bash
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+```
+
+Additionally, you will need to install the accompanying CLI tool.
+This tool will allow you to easily link your GitOps repository taking care of the entire process.
+The instructions to install it will vary between different platforms.
+The official documentation shows the [recommended method](https://argoproj.github.io/argo-cd/cli_installation/) on each of the major ones.
+
+## Setting up GitOps repository
+
+To set up the GitOps repository so that it's tracked by ArgoCD we will use the `argocd` CLI tool.
+We will assume that the `GITHUB_ORG` and `REPONAME` environment variables have been created and that the repository has already been created and can be found in the `https://github.com/$GITHUB_ORG/$REPONAME` url.
+
+
+```bash
+%%bash
+export GITHUB_ORG=SeldonIO
+export REPONAME=seldon-gitops
+```
+
+### Private repositories (optional)
+
+If your repository is private, we will first need to provide the right credentials for ArgoCD to use.
+We can do so either using a [user / password login](https://argoproj.github.io/argo-cd/user-guide/private-repositories/#https-username-and-password-credential) or using [SSH keys](https://argoproj.github.io/argo-cd/user-guide/private-repositories/#tls-client-certificates-for-https-repositories).
+Note that, for the former, we can also use a [personal access token](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line) instead of the password.
+
+As an example, we will add our GitOps repository using a personal access token.
+We will assume that the environment variables `GITHUB_USER` and `GITHUB_TOKEN` are set.
+
+
+```bash
+%%bash
+export GITHUB_USER=john.doe
+export GITHUB_TOKEN=12341234
+
+argocd repo add https://github.com/$GITHUB_ORG/$REPONAME --username $GITHUB_USER --password $GITHUB_TOKEN
+```
+
+### Create ArgoCD projects
+
+The next step is to create two projects within ArgoCD to manage the staging and production environments respectively.
+Each of them will be linked to a folder within our GitOps repository.
+
+
+```bash
+%%bash
+argocd app create seldon-staging \
+    --repo https://github.com/$GITHUB_ORG/$REPONAME \
+    --path staging \
+    --dest-namespace staging
+argocd app create seldon-production \
+    --repo https://github.com/$GITHUB_ORG/$REPONAME \
+    --path production \
+    --dest-namespace production
+```
+
+Note that we could also sync our `staging` and `production` environment differently.
+For example, we could have them on separate repositories or separate branches.
+In this case we would also need to update the `promote_application.sh` script so that it knows how it should promote the respective model between environments.
