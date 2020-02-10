@@ -526,11 +526,15 @@ kubectl get svc -n jenkins | grep jenkins
 
 ## Further configuration 
 
-If you wish to set up automated pipeline triggers, you will have to install the "GitHub" plugin (there are quite a few github related ones but the one you want is the one called plainly "GitHub", which then will allow for triggering pipelines automatically on commit
+If you wish to set up automated pipeline triggers, you will have to install the "GitHub" plugin (there are quite a few github related ones but the one you want is the one called plainly "GitHub", which then will allow for triggering pipelines automatically on commit.
 
 - Install the GitHub Plugin [(for automated webhook triggers)](https://support.cloudbees.com/hc/en-us/articles/115003015691-GitHub-Webhook-Non-Multibranch-Jobs).
 - Provide a GitHub token with read access so it can clone relevant repositories.
 - Set-up webhooks so that GitHub can send push requests.
+
+Additionally, you will need to configure your Git's `name` and `email` as part of Jenkins settings.
+
+![Git user config](./images/git-user.png)
 
 ### Make sure plugins are updated
 
